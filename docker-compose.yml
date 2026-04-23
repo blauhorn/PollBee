@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  pollapp-frontend:
+    build: ./frontend
+    container_name: pollapp-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8100:8100"
+    depends_on:
+      - pollapp-backend
+    environment:
+      VITE_NEXTCLOUD_BASE_URL: ${VITE_NEXTCLOUD_BASE_URL}  
+    volumes:
+      - /mnt/pollbee/assets:/usr/share/nginx/html/pollapp/branding:ro
+
+  pollapp-backend:
+    build: ./backend
+    container_name: pollapp-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8101:8101"
+    environment:
+      NEXTCLOUD_BASE_URL: ${NEXTCLOUD_BASE_URL}
+      NEXTCLOUD_ADMIN_USERNAME: ${NEXTCLOUD_ADMIN_USERNAME}
+      NEXTCLOUD_ADMIN_APP_PASSWORD: ${NEXTCLOUD_ADMIN_APP_PASSWORD}
+      POLLAPP_SESSION_DB_PATH: /data/pollapp_sessions.db
+    volumes:
+      - /mnt/pollbee/backend-data:/data
