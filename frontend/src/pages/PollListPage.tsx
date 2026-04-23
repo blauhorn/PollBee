@@ -1,8 +1,9 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Plus, X, Trash2 } from 'lucide-react'
+import { Plus, X, Trash2, LogOut } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, type Poll, type PollOption, type CreatePollOptionInput, type User } from '../api'
 import IconButton from '../components/IconButton'
+import { LogOut } from 'lucide-react'
 
 type PollListPageProps = {
   initialFilter?: string
@@ -630,25 +631,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                       {currentUser?.displayName}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      style={{
-                        width: '100%',
-                        display: 'block',
-                        textAlign: 'left',
-                        padding: '0.75rem 0.9rem',
-                        background: '#ffffff',
-                        color: '#111827',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '0.95rem',
-                        lineHeight: 1.4,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Abmelden
-                    </button>
+                    <IconButton
+                        onClick={handleLogout}
+                        title="Abmelden"
+                        icon={<LogOut size={20} />}
+                      />
+
+
+                    
                 </div>
               )}
             </div>
