@@ -23,7 +23,7 @@ Ziel: Schnell sehen, **wer kann – und wo es eng wird**.
 ### Installation
 
 ```bash
-git clone https://github.com/<dein-repo>/pollbee.git
+git clone https://github.com/blauhorn/PollBee.git
 cd pollbee
 cp .env.example .env
 ```
