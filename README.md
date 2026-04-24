@@ -1,204 +1,183 @@
-# PollBee – Nextcloud Polls Web App
+🎺 PollBee – Umfragen für Ensembles (Nextcloud Polls Companion)
+
+PollBee ist eine Progressive Web App (PWA) für die komfortable Nutzung von Nextcloud-Umfragen – optimiert für Bands, Ensembles und Orchester.
 
-PollBee ist eine moderne Web-App zur komfortablen Nutzung von Nextcloud Polls.
-Sie richtet sich insbesondere an Gruppen wie Bands oder Teams, die schnell und übersichtlich Abstimmungen durchführen möchten.
+Ziel: Schnell sehen, wer kann – und wo es eng wird.
+
+✨ Features
+📊 Umfragen-Übersicht
+Anzeige aller offenen und abgeschlossenen Umfragen
+Farblich unterschieden für bessere Orientierung
+Offene (noch nicht beantwortete) Umfragen ganz oben
+Erinnerungspunkt auf der Karte:
+erscheint, wenn du noch nicht vollständig abgestimmt hast
+🧾 Kompakte Zusammenfassung
 
-Die Anwendung bietet eine optimierte Oberfläche für:
+Jede Umfrage zeigt auf einen Blick:
 
-* schnelle Übersicht über Umfragen
-* strukturierte Darstellung von Abstimmungen
-* komfortables Abstimmen (inkl. Register-Logik)
-* personalisierte Darstellung pro Nutzer
+Stimmen pro Option (Ja / Nein / Vielleicht)
+Anzahl fehlender Antworten
+➕ Neue Umfrage erstellen
+Über den blauen „+“-Button unten rechts
+Jede Person kann Umfragen erstellen
+Der Ersteller ist automatisch verantwortlich für:
+Bearbeiten
+Beenden / Wiederöffnen
+Weiterverarbeitung (z. B. Kalender)
+📅 Detailansicht
 
----
+Hier passiert die eigentliche Abstimmung:
 
-## 🚀 Features
+Abstimmung pro Terminoption:
+✅ Ja
+❌ Nein
+❓ Vielleicht (falls aktiviert)
+Speicherung über den blauen Haken
 
-### 🔐 Login Flow v2 (Nextcloud Standard)
+Einschränkungen:
+
+Abstimmung nur möglich, wenn:
+Umfrage noch offen ist
+Termin nicht zu weit in der Vergangenheit liegt (aktuell ~4 Tage Toleranz)
+👥 Gruppen-/Register-Ansicht
+
+Ein zentrales Feature für die Organisation von Ensembles:
+
+👉 Klick auf eine Terminoption zeigt:
+
+Aufschlüsselung nach frei definierbaren Gruppen (z. B. Register, Stimmen, Teams)
+
+➡️ Damit erkennst du sofort:
+
+Wo Besetzungsprobleme entstehen
+Ob Ersatz organisiert werden muss
+
+Konfiguration:
 
-* Login erfolgt über den offiziellen Nextcloud Login Flow
-* keine Speicherung von Benutzerpasswörtern
-* Verwendung von App-Passwörtern (revokable)
-* funktioniert auch auf mobilen Geräten
-
----
-
-### 📊 Umfragenübersicht (PollList)
-
-* kompakte Kartenansicht aller Umfragen
-
-* intelligente Sortierung:
-
-  * offene Umfragen mit fehlenden Antworten ganz oben
-
-* farbliche Hervorhebung:
-
-  * 🟧 offen mit fehlenden Antworten
-  * 🟩 offen, vollständig beantwortet
-  * 🟦 abgeschlossen
-  * ⚪ vergangene Umfragen (gedimmte Darstellung)
-
-* Badge für offene Antworten („offen“)
-
-* persönlicher Begrüßungstext (tageszeitabhängig)
-
-* Anzeige offener Umfragen für den aktuellen Nutzer
-
----
-
-### 🔍 Filter & Suche
-
-* Textfilter (Titel, Beschreibung)
-* Datumsfilter (von/bis)
-* kompakte, einklappbare Filteransicht
-
----
-
-### 📋 Detailansicht
-
-* tabellarische Darstellung der Optionen
-* Stimmen nach:
-
-  * Ja / Nein / Vielleicht / Fehlt
-* Akkordeon-Ansicht pro Option
-* Gruppierung nach Registern (z. B. Band-Sektionen)
-* Hervorhebung des eigenen Namens
-
----
-
-### 🗳️ Abstimmung
-
-* direkte Stimmabgabe pro Option
-* Unterstützung für:
-
-  * Ja
-  * Nein
-  * Vielleicht
-* sofortige Aktualisierung der Ansicht
-
----
-
-## 🏗️ Architektur
-
-### Frontend
-
-* React + TypeScript
-* Vite
-* einfache Inline-Styling-Strategie (keine UI-Framework-Abhängigkeit)
-
-### Backend
-
-* FastAPI
-* Session-basierte Authentifizierung
-* Proxy für Nextcloud API
-
-### Integration
-
-* Nextcloud Polls API
-* Login Flow v2 (`/index.php/login/v2`)
-* Vote-Endpoint (`PUT /apps/polls/vote`)
-
----
-
-## 🔧 Setup
-
-### Voraussetzungen
-
-* Docker + Docker Compose
-* Nextcloud-Instanz mit aktivierter Polls-App
-
----
-
-### Projekt starten
-
-```bash
-docker compose up --build
-```
-
-Frontend ist anschließend erreichbar unter:
-
-```
-http://localhost:8080
-```
-
----
-
-## 🔑 Login
-
-1. Server-URL eingeben (z. B. `https://cloud.example.com`)
-2. „Mit Nextcloud verbinden“
-3. Login im Browser bestätigen
-4. Zurück zur App → automatische Anmeldung
-
----
-
-## 📁 Projektstruktur
-
-```
-pollapp/
-├── frontend/        # React App
-├── backend/         # FastAPI Backend
-├── docker-compose.yml
-└── README.md
-```
-
----
-
-## 🧠 Besonderheiten
-
-### Intelligente Sortierung
-
-Die Umfragen werden automatisch priorisiert:
-
-1. offene Umfragen mit fehlenden Antworten
-2. restliche Umfragen
-3. innerhalb der Gruppen nach Aktualität
-
----
-
-### Benutzerzentrierte Darstellung
-
-* Anzeige persönlicher Status
-* Hervorhebung eigener Antworten
-* Fokus auf „wo muss ich noch abstimmen“
-
----
-
-### Register-Logik
-
-Die Detailansicht unterstützt Gruppierungen, z. B.:
-
-* Saxophon
-* Trompete
-* Rhythmusgruppe
-
-Damit wird sofort sichtbar:
-
-* wer fehlt
-* welche Sektion vollständig ist
-
----
-
-## 📌 Roadmap
-
-Geplante Features:
-
-* ⚙️ Einstellungen (Theme, Server, Account)
-* ➕ Umfrage erstellen
-* 📱 weitere Mobile-Optimierungen
-* 🎨 UI/Design-Feinschliff
-* 🔔 Benachrichtigungen / Erinnerungen
-
----
-
-## 🤝 Beitrag
-
-Dieses Projekt ist aktuell ein internes Tool, kann aber gerne erweitert werden.
-Pull Requests und Ideen sind willkommen.
-
----
-
-## 📄 Lizenz
-
-Noch nicht festgelegt.
-
+Erfolgt serverseitig in register_config.py
+Jede Gruppe ist einer groupId zugeordnet
+Diese groupId muss mit den Nutzergruppen in der Nextcloud-Instanz übereinstimmen
+
+➡️ Dadurch ist PollBee flexibel einsetzbar für:
+
+Bigbands
+Orchester
+kleinere Bands
+beliebige Teamstrukturen
+🛠️ Funktionen für Umfrage-Ersteller
+
+Eigene Umfragen bieten zusätzliche Steuerung:
+
+🔒 Beenden
+🔓 Wieder öffnen
+📆 In Kalender übernehmen
+Status pro Option setzen:
+ANFRAGE
+FIX
+CANCELED
+🔗 Teilen von Umfragen
+Jede Umfrage kann geteilt werden (System-Share)
+Der Link:
+öffnet direkt PollBee (wenn installiert)
+sonst den Browser
+
+💡 Ideal für:
+
+Erinnerungen an säumige Teilnehmer
+Schnelles Nachfassen
+💬 Kommentare
+Kommentar-Button öffnet aktuell die Umfrage in Nextcloud (Browser)
+Direkte Integration in PollBee ist derzeit technisch nicht möglich
+🔐 Login & Installation (PWA)
+Login-Flow
+
+Beim ersten Zugriff:
+
+App öffnet Login im zweiten Browser-Tab
+Anmeldung bei Nextcloud
+Berechtigung erteilen
+Tab schließen → zurück zur App
+
+Funktioniert stabil auf:
+
+Desktop
+Android
+iOS
+📱 Installation als App
+
+Android (Chrome):
+
+„Zum Startbildschirm hinzufügen“
+
+iOS (Safari):
+
+„Zum Home-Bildschirm“
+⚙️ Installation & Server-Setup
+
+PollBee besteht aus:
+
+Backend (API / Proxy)
+Frontend (PWA)
+🐳 Beispiel: Docker Compose
+version: "3.9"
+
+services:
+  pollapp-backend:
+    build: ./backend
+    container_name: pollapp-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  pollapp-frontend:
+    build: ./frontend
+    container_name: pollapp-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8100:8100"
+    depends_on:
+      - pollapp-backend
+    environment:
+      VITE_NEXTCLOUD_BASE_URL: ${VITE_NEXTCLOUD_BASE_URL}
+🔧 Konfiguration (.env)
+
+Die zentrale Konfiguration erfolgt über die .env-Datei.
+
+Beispiel:
+# Basis-URL deiner Nextcloud
+NEXTCLOUD_BASE_URL=https://cloud.example.com
+
+# Öffentliche URL der PollBee API (für Redirects / Login-Flow)
+PUBLIC_BASE_URL=https://pollbee.example.com
+
+# Secret für interne Auth-/State-Validierung
+APP_SECRET=change-me
+
+# CORS / erlaubte Hosts (optional)
+ALLOWED_ORIGINS=https://pollbee.example.com
+Wichtige Hinweise
+NEXTCLOUD_BASE_URL muss auf die erreichbare Nextcloud zeigen
+HTTPS wird dringend empfohlen (Login-Flow!)
+Reverse Proxy (nginx etc.) sollte korrekt konfiguriert sein
+Cookies / Session müssen durchgereicht werden
+🧠 Idee hinter PollBee
+
+PollBee ergänzt Nextcloud Polls um:
+
+bessere Übersicht
+schnellere Entscheidungsfähigkeit
+gruppenbasierte Auswertung
+
+➡️ Fokus: Organisation statt Suchen
+
+🚧 Bekannte Einschränkungen
+Kommentare nur über das Nextcloud-Webinterface verfügbar
+Gruppen-/Registerdarstellung setzt voraus, dass:
+passende Gruppen in der Nextcloud existieren
+die groupId-Einträge in register_config.py korrekt darauf abgebildet sind
+➜ keine automatische Synchronisation oder Discovery der Gruppen
+🔮 Roadmap (optional)
+Automatische Erkennung und Synchronisation von Nextcloud-Gruppen
+Vereinfachte Konfiguration der Gruppen (z. B. UI statt Datei)
+Push-Benachrichtigungen bei neuen Umfragen
+Erweiterte Kalenderfunktionen

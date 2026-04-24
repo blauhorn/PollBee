@@ -1,6 +1,6 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Plus, X, Trash2, LogOut } from 'lucide-react'
+import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, type Poll, type PollOption, type CreatePollOptionInput, type User } from '../api'
 import IconButton from '../components/IconButton'
 import { LogOut } from 'lucide-react'
