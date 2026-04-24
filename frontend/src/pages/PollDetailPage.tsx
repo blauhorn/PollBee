@@ -329,7 +329,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 }, [pollId, navigate])
 
   function buildPollAppUrl(pollId: string) {
-    return new URL(`/pollapp/polls/${pollId}`, window.location.origin).toString()
+    return new URL(`${BASE_PATH}polls/${pollId}`, window.location.origin).toString()
   }
 
   function handleVoteChange(optionId: string, value: VoteValue) {
@@ -795,6 +795,9 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     cursor: 'pointer',
     boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
   }
+
+  const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
+
   function getOptionTotals(optionId: string) {
   const grouped = optionDetails[optionId] ?? {}
 
@@ -1069,7 +1072,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           }}
         >
           <img
-            src="/pollapp/branding/logo-ntso.svg"
+            src={`${BASE_PATH}branding/logo-ntso.svg`}
             alt="NTSO"
             style={{
               maxHeight: '2rem',

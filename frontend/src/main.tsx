@@ -6,9 +6,11 @@ import { registerSW } from 'virtual:pwa-register'
 
 registerSW({ immediate: true })
 
+const basePath = import.meta.env.VITE_BASE_PATH || '/pollapp/'
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter basename="/pollapp">
+    <BrowserRouter basename={basePath.replace(/\/$/, '')}>
       <App />
     </BrowserRouter>
   </React.StrictMode>,

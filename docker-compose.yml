@@ -12,7 +12,7 @@ services:
     environment:
       VITE_NEXTCLOUD_BASE_URL: ${VITE_NEXTCLOUD_BASE_URL}  
     volumes:
-      - /mnt/pollbee/assets:/usr/share/nginx/html/pollapp/branding:ro
+      - /mnt/pollbee/assets:/usr/share/nginx/html/branding:ro
 
   pollapp-backend:
     build: ./backend
