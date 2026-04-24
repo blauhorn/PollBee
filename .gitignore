@@ -3,4 +3,4 @@ dist/
 __pycache__/
 *.pyc
 .env
-register_config.py
+backend/register_config.py
