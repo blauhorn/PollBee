@@ -225,14 +225,52 @@ ALLOWED_ORIGINS=https://pollbee.example.com
 
 ---
 
-### Wichtige Hinweise
+## 🧩 Gruppen-Konfiguration (`register_config.py`)
 
-- `NEXTCLOUD_BASE_URL` muss auf die erreichbare Nextcloud zeigen
-- HTTPS wird dringend empfohlen (Login-Flow!)
-- Reverse Proxy (nginx etc.) sollte korrekt konfiguriert sein
-- Cookies / Session müssen durchgereicht werden
+PollBee nutzt bestehende Nextcloud-Gruppen zur Auswertung der Umfragen nach Gruppen (z. B. Register, Stimmen oder Teams).
 
-💡 PollBee nutzt bestehende Nextcloud-Gruppen direkt – die Zuordnung erfolgt über `register_config.py`.
+Die Zuordnung erfolgt über die Datei:
+
+```
+backend/register_config.py
+```
+
+### Beispiel
+
+```python
+REGISTER_GROUPS = [
+    {"name": "Conductor", "groupId": "conductor"},
+    {"name": "Rhythm", "groupId": "rhythm"},
+    {"name": "Saxes", "groupId": "saxes"},
+    {"name": "Trombones", "groupId": "trombones"},
+    {"name": "Trumpets", "groupId": "trumpets"},
+    {"name": "Vocals", "groupId": "vocals"},
+]
+```
+
+---
+
+### 🔑 Wichtig
+
+- `groupId` muss **exakt** dem Gruppennamen in der Nextcloud entsprechen
+- Groß-/Kleinschreibung ist relevant
+- Nutzer müssen Mitglied dieser Gruppen sein, damit sie korrekt ausgewertet werden
+
+---
+
+### 💡 Funktionsweise
+
+- PollBee fragt die Gruppeninformationen über die Nextcloud-API ab
+- Stimmen werden anhand der Gruppenzugehörigkeit aggregiert
+- Die Anzeige erfolgt in der Detailansicht pro Terminoption
+
+---
+
+### ⚠️ Hinweise
+
+- Es gibt aktuell **keine automatische Erkennung** der Gruppen
+- Änderungen an der Datei erfordern einen **Neustart des Backends**
+- Nicht zugeordnete Nutzer erscheinen nicht in der Gruppenübersicht
 
 ---
 
