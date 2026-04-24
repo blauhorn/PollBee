@@ -3,10 +3,10 @@ version: "3.9"
 services:
   pollapp-frontend:
     build: ./frontend
-    container_name: pollapp-frontend
+    container_name: pollapp-frontend-dev
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8100:8100"
+      - "127.0.0.1:8200:8100"
     depends_on:
       - pollapp-backend
     environment:
@@ -16,10 +16,10 @@ services:
 
   pollapp-backend:
     build: ./backend
-    container_name: pollapp-backend
+    container_name: pollapp-backend-dev
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8101:8101"
+      - "127.0.0.1:8201:8101"
     environment:
       NEXTCLOUD_BASE_URL: ${NEXTCLOUD_BASE_URL}
       NEXTCLOUD_ADMIN_USERNAME: ${NEXTCLOUD_ADMIN_USERNAME}
