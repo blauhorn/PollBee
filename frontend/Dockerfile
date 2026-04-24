@@ -2,6 +2,12 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+ARG VITE_BASE_PATH=/pollapp/
+ARG VITE_API_BASE=/pollapp/api
+
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
+ENV VITE_API_BASE=$VITE_API_BASE
+
 COPY package.json package-lock.json* tsconfig.json vite.config.ts index.html ./
 COPY src ./src
 COPY public ./public
