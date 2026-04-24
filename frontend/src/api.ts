@@ -182,7 +182,7 @@ export type CreatePollResponse = {
   pollId: string
 }
 
-const API_BASE = '/pollapp/api'
+const API_BASE = import.meta.env.VITE_API_BASE || '/pollapp/api'
 
 async function getNextcloudRequestToken(): Promise<string> {
   if (cachedRequestToken) {
