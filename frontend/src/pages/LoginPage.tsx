@@ -16,7 +16,7 @@ type LoginFlowStatusResponse = {
   error?: string
 }
 
-const API_BASE = '/pollapp/api'
+const API_BASE = import.meta.env.VITE_API_BASE || '/pollapp/api'
 const LAST_SERVER_URL_KEY = 'pollapp:lastServerUrl'
 const DEFAULT_SERVER_URL = import.meta.env.VITE_DEFAULT_SERVER_URL ?? ''
 

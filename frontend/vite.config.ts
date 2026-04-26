@@ -2,19 +2,21 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const basePath = process.env.VITE_BASE_PATH || '/pollapp/'
+
 export default defineConfig({
-  base: '/pollapp/',
+  base: basePath,
   plugins: [
     react(),
     VitePWA({
     registerType: 'autoUpdate',
     manifest: {
-      id: '/pollapp/',
+      id: basePath,
       name: 'PollBee',
       short_name: 'PollBee',
       description: 'Mobile Oberfläche für Nextcloud Polls',
-      start_url: '/pollapp/',
-      scope: '/pollapp/',
+      start_url: basePath,
+      scope: basePath,
       display: 'standalone',
       background_color: '#ffffff',
       theme_color: '#2563eb',
@@ -38,7 +40,7 @@ export default defineConfig({
       ]
     },
     workbox: {
-      navigateFallback: '/pollapp/index.html',
+      navigateFallback: `${basePath}index.html`,
       globPatterns: ['**/*.{js,css,html,png,svg,webp}']
     }
   })

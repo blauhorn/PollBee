@@ -34,6 +34,7 @@ SESSION_TTL_SECONDS = 60 * 60 * 24 * 30 #30 Tage gueltig
 LOGIN_FLOW_TTL_SECONDS = 60 * 10  # 10 Minuten
 login_flow_store: dict[str, dict] = {}
 session_store = SQLiteSessionStore(SESSION_DB_PATH)
+API_PREFIX = os.getenv("POLLAPP_API_PREFIX", "/pollapp/api")
 
 class PollCommentPayload(BaseModel):
     comment: str
@@ -490,8 +491,8 @@ def auth_me(request: Request, response: Response):
         "id": session.user_id,
         "displayName": session.display_name,
         "serverUrl": session.base_url,
-        "avatarUrl": "/pollapp/api/auth/avatar",
-        "logoUrl": "/pollapp/api/auth/logo",
+        "avatarUrl": f"{API_PREFIX}/auth/avatar",
+        "logoUrl": f"{API_PREFIX}/auth/logo",
         
     }
     

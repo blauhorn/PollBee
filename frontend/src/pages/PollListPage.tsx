@@ -243,11 +243,11 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [showDateFilters, setShowDateFilters] = useState(false)
-
+  const API_BASE = import.meta.env.VITE_API_BASE || '/pollapp/api'
   const [menuOpen, setMenuOpen] = useState(false)
   const handleLogout = async () => {
     try {
-      await fetch('/pollapp/api/auth/logout', {
+      await fetch(`${API_BASE}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       })
@@ -259,7 +259,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
     setMenuOpen(false)
 
     // Weiterleitung zur Login-Seite
-    window.location.href = '/pollapp/login'
+    window.location.href = `${BASE_PATH}login`
   }
 
   const [showCreatePollDialog, setShowCreatePollDialog] = useState(false)
@@ -402,6 +402,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       }
     })
   }, [filteredPolls])
+
+  const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
   function openCreatePollDialog() {
   setShowCreatePollDialog(true)
@@ -683,7 +685,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 		  }}
 		>
 		  <img
-        src="/pollapp/branding/logo-ntso.svg"
+        src={`${BASE_PATH}branding/logo-ntso.svg`}
         alt="NTSO"
         style={{
           maxHeight: '2rem',
