@@ -666,9 +666,20 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     }
   }
 
+
+
   function closeAuthorDialog() {
     closeTransferOwnerDialog()
     setPollAdminError('')
+  }
+
+  function openAuthorDialog() {
+    setShowAuthorDialog(true)
+    setPollAdminError('')
+    setTransferError('')
+    setTransferConfirm(false)
+    setSelectedNewOwnerId('')
+    setSelectedNewOwnerLabel('')
   }
 
   const optionDetails = useMemo(() => {
