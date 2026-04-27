@@ -704,9 +704,11 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           share = await createPollShare(poll!.id, user.id)
         }
 
-        if (!share.user?.isUnrestrictedOwner) {
-          await setPollShareAdmin(share.token)
+        if (!share.token) {
+          throw new Error(`Kein Share-Token für ${user.displayName || user.id} erhalten.`)
         }
+
+        await setPollShareAdmin(share.token)
       }
 
       setSelectedNewPollAdmins([])
