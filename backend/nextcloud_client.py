@@ -863,9 +863,8 @@ class NextcloudClient:
     def create_poll_share(self, poll_id: str, user_id: str):
         response = self._request(
             "POST",
-            "/apps/polls/share",
+            f"/apps/polls/poll/{poll_id}/share",
             json_data={
-                "pollId": poll_id,
                 "type": "user",
                 "userId": user_id,
             },
