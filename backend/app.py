@@ -1638,3 +1638,18 @@ def remove_poll_share_admin(share_token: str):
             status_code=502,
             detail=f"Co-Autor konnte nicht entfernt werden: {exc}",
         )
+
+@app.post("/polls/{poll_id}/shares")
+def create_poll_share(poll_id: str, payload: dict, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
+    user_id = str(payload.get("userId") or "").strip()
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="userId fehlt.")
+
+    try:
+        return client.create_poll_share(poll_id, user_id)
+    except NextcloudApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

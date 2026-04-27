@@ -293,8 +293,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 > ({})
 
   
-  useEffect(() => {
-  async function load() {
+  async function loadPollDetail() {
     if (!pollId) {
       navigate('/polls', { replace: true })
       return
@@ -332,14 +331,14 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           message: 'Die angeforderte Umfrage wurde nicht gefunden oder konnte nicht geladen werden.',
         },
       })
-      return
     } finally {
       setLoading(false)
     }
   }
 
-  void load()
-}, [pollId, navigate])
+  useEffect(() => {
+    void loadPollDetail()
+  }, [pollId])
 
   function buildPollAppUrl(pollId: string) {
     return new URL(`${BASE_PATH}polls/${pollId}`, window.location.origin).toString()
@@ -665,7 +664,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
     try {
       await setPollShareAdmin(share.token)
-      await load()
+      await loadPollDetail()
     } catch (error) {
       setPollAdminError(
         error instanceof Error ? error.message : 'Co-Autor konnte nicht hinzugefügt werden.',
@@ -681,7 +680,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
     try {
       await removePollShareAdmin(share.token)
-      await load()
+      await loadPollDetail()
     } catch (error) {
       setPollAdminError(
         error instanceof Error ? error.message : 'Co-Autor konnte nicht entfernt werden.',
@@ -710,7 +709,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
       setSelectedNewPollAdmins([])
       setPollAdminConfirm(false)
-      await load()
+      await loadPollDetail()
     } catch (error) {
       setPollAdminError(
         error instanceof Error
@@ -728,7 +727,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
     try {
       await removePollShareAdmin(share.token)
-      await load()
+      await loadPollDetail()
     } catch (error) {
       setPollAdminError(
         error instanceof Error

@@ -263,6 +263,15 @@ async function apiFetch(input: string, init?: RequestInit) {
   return response
 }
 
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = await response.json()
+    return data.detail || data.message || fallback
+  } catch {
+    return fallback
+  }
+}
+
 export async function fetchHealth(): Promise<{ status: string }> {
   const response = await apiFetch('/health')
   if (!response.ok) {
@@ -519,7 +528,9 @@ export async function setPollShareAdmin(shareToken: string): Promise<PollShare> 
   )
 
   if (!response.ok) {
-    throw new Error('Co-Autor konnte nicht hinzugefügt werden.')
+    throw new Error(
+      await readErrorMessage(response, 'Co-Autor konnte nicht hinzugefügt werden.'),
+    )
   }
 
   const data = await response.json()
@@ -539,7 +550,9 @@ export async function removePollShareAdmin(shareToken: string): Promise<PollShar
   )
 
   if (!response.ok) {
-    throw new Error('Co-Autor konnte nicht entfernt werden.')
+    throw new Error(
+      await readErrorMessage(response, 'Co-Autor konnte nicht entfernt werden.'),
+    )
   }
 
   const data = await response.json()
