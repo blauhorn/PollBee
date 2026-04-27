@@ -861,20 +861,19 @@ class NextcloudClient:
         return fallback_hour, fallback_minute
     
     def create_poll_share(self, poll_id: str, user_id: str):
-        return self._request(
-            "POST",
-            "/apps/polls/share",
-            data={
-                "pollId": poll_id,
-                "type": "user",
-                "userId": user_id,
-            },
-            headers={
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "NC-Polls-Client-Id": "pollbee",
-                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
-            },
-        )
+    return self._request(
+        "POST",
+        "/apps/polls/share",
+        json_data={
+            "pollId": poll_id,
+            "type": "user",
+            "userId": user_id,
+        },
+        headers={
+            "Accept": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "NC-Polls-Client-Id": "pollbee",
+            "NC-Polls-Client-Time-Zone": "Europe/Berlin",
+        },
+    ).json()
     
