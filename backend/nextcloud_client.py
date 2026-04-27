@@ -861,7 +861,7 @@ class NextcloudClient:
         return fallback_hour, fallback_minute
     
     def create_poll_share(self, poll_id: str, user_id: str):
-        return self._request(
+        response = self._request(
             "POST",
             "/apps/polls/share",
             json_data={
@@ -875,5 +875,12 @@ class NextcloudClient:
                 "NC-Polls-Client-Id": "pollbee",
                 "NC-Polls-Client-Time-Zone": "Europe/Berlin",
             },
-        ).json()
+        )
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise NextcloudApiError(
+                f"Share creation failed with status {response.status_code}: {response.text[:500]}"
+            ) from exc
     
