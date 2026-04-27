@@ -408,6 +408,36 @@ def build_calendar_summary(base_title: str, entry_status: str) -> str:
     title = str(base_title or "").strip() or "Umfragetermin"
     return f"{prefix} {title}"
 
+def is_current_user_poll_admin(poll_data: dict, session) -> bool:
+    owner_id = extract_owner_id(poll_data)
+    current_user_id = str(session.user_id).strip()
+
+    if owner_id and str(owner_id).strip() == current_user_id:
+        return True
+
+    raw_shares = poll_data.get("shares", []) or []
+
+    for share in raw_shares:
+        if not isinstance(share, dict) or share.get("deleted"):
+            continue
+
+        user = share.get("user") or {}
+        if not isinstance(user, dict):
+            continue
+
+        share_user_id = str(
+            user.get("userId")
+            or user.get("id")
+            or user.get("user")
+            or user.get("emailAddress")
+            or ""
+        ).strip()
+
+        if share_user_id == current_user_id and bool(user.get("isUnrestrictedOwner")):
+            return True
+
+    return False
+
 @app.get("/")
 def root():
     return {"message": "PollApp backend läuft"}
@@ -1140,10 +1170,13 @@ def toggle_poll_closed(poll_id: str, request: Request):
     owner_id = extract_owner_id(poll_data)
     is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
 
-    if not is_owner:
+    raw_poll_response = client.get_poll(poll_id)
+    poll_data = raw_poll_response.get("poll", raw_poll_response)
+
+    if not is_current_user_poll_admin(poll_data, session):
         raise HTTPException(
             status_code=403,
-            detail="Nur der Eigentümer darf die Umfrage öffnen oder schließen",
+            detail="Nur Eigentümer oder Co-Autoren dürfen die Umfrage verwalten.",
         )
 
     raw_status = poll_data.get("status", {})
@@ -1520,10 +1553,13 @@ def create_poll_calendar_events(
     owner_id = extract_owner_id(poll_data)
     is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
 
-    if not is_owner:
+    raw_poll_response = client.get_poll(poll_id)
+    poll_data = raw_poll_response.get("poll", raw_poll_response)
+
+    if not is_current_user_poll_admin(poll_data, session):
         raise HTTPException(
             status_code=403,
-            detail="Nur der Eigentümer darf Kalendereinträge erzeugen",
+            detail="Nur Eigentümer oder Co-Autoren dürfen die Umfrage verwalten.",
         )
 
     selection_map = {
