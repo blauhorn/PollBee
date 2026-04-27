@@ -438,6 +438,21 @@ def is_current_user_poll_admin(poll_data: dict, session) -> bool:
 
     return False
 
+def get_poll_with_shares(client, poll_id: str) -> dict:
+    raw_poll_response = client.get_poll(poll_id)
+    poll_data = raw_poll_response.get("poll", raw_poll_response)
+
+    shares = (
+        poll_data.get("shares", [])
+        or raw_poll_response.get("shares", [])
+        or []
+    )
+
+    if shares:
+        poll_data["shares"] = shares
+
+    return poll_data
+
 @app.get("/")
 def root():
     return {"message": "PollApp backend läuft"}
@@ -1170,30 +1185,9 @@ def toggle_poll_closed(poll_id: str, request: Request):
     owner_id = extract_owner_id(poll_data)
    
 
-    raw_poll_response = client.get_poll(poll_id)
-    poll_data = raw_poll_response.get("poll", raw_poll_response)
+    poll_detail = get_poll_by_id(poll_id, request)
 
-    if not is_current_user_poll_admin(poll_data, session):
-        print("DEBUG poll admin check failed", {
-            "poll_id": poll_id,
-            "current_user": session.user_id,
-            "owner_id": extract_owner_id(poll_data),
-            "share_count": len(poll_data.get("shares", []) or []),
-            "shares": [
-                {
-                    "token": share.get("token"),
-                    "deleted": share.get("deleted"),
-                    "user_id": (share.get("user") or {}).get("id"),
-                    "user_userId": (share.get("user") or {}).get("userId"),
-                    "user_user": (share.get("user") or {}).get("user"),
-                    "email": (share.get("user") or {}).get("emailAddress"),
-                    "isUnrestrictedOwner": (share.get("user") or {}).get("isUnrestrictedOwner"),
-                }
-                for share in (poll_data.get("shares", []) or [])
-                if isinstance(share, dict)
-            ],
-        })
-    
+    if not poll_detail.get("permissions", {}).get("isPollAdmin", False):
         raise HTTPException(
             status_code=403,
             detail="Nur Eigentümer oder Co-Autoren dürfen die Umfrage verwalten.",
@@ -1573,33 +1567,12 @@ def create_poll_calendar_events(
     owner_id = extract_owner_id(poll_data)
     
 
-    raw_poll_response = client.get_poll(poll_id)
-    poll_data = raw_poll_response.get("poll", raw_poll_response)
+    poll_detail = get_poll_by_id(poll_id, request)
 
-    if not is_current_user_poll_admin(poll_data, session):
-        print("DEBUG poll admin check failed", {
-            "poll_id": poll_id,
-            "current_user": session.user_id,
-            "owner_id": extract_owner_id(poll_data),
-            "share_count": len(poll_data.get("shares", []) or []),
-            "shares": [
-                {
-                    "token": share.get("token"),
-                    "deleted": share.get("deleted"),
-                    "user_id": (share.get("user") or {}).get("id"),
-                    "user_userId": (share.get("user") or {}).get("userId"),
-                    "user_user": (share.get("user") or {}).get("user"),
-                    "email": (share.get("user") or {}).get("emailAddress"),
-                    "isUnrestrictedOwner": (share.get("user") or {}).get("isUnrestrictedOwner"),
-                }
-                for share in (poll_data.get("shares", []) or [])
-                if isinstance(share, dict)
-            ],
-        })
-    
+    if not poll_detail.get("permissions", {}).get("isPollAdmin", False):
         raise HTTPException(
             status_code=403,
-            detail="Nur Eigentümer oder Co-Autoren dürfen die Umfrage verwalten.",
+            detail="Nur Eigentümer oder Co-Autoren dürfen Kalendereinträge erzeugen.",
         )
 
     selection_map = {
