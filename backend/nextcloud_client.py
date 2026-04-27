@@ -79,21 +79,28 @@ class NextcloudClient:
             "NC-Polls-Client-Time-Zone": "Europe/Berlin",
         }
 
-    def set_poll_share_admin(self, share_token: str) -> dict:
-        response = self.session.put(
-            f"{self.base_url}/apps/polls/share/{share_token}/admin",
-            headers=self._polls_headers(),
+    def set_poll_share_admin(self, share_token: str) -> dict[str, Any]:
+        return self._request(
+            "PUT",
+            f"/apps/polls/share/{share_token}/admin",
+            headers={
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "NC-Polls-Client-Id": "pollbee",
+                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
+            },
+        )   
+    def remove_poll_share_admin(self, share_token: str) -> dict[str, Any]:
+        return self._request(
+            "PUT",
+            f"/apps/polls/share/{share_token}/admin",
+            headers={
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "NC-Polls-Client-Id": "pollbee",
+                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
+            },
         )
-        response.raise_for_status()
-        return response.json()
-    
-    def remove_poll_share_admin(self, share_token: str) -> dict:
-        response = self.session.delete(
-            f"{self.base_url}/apps/polls/share/{share_token}/admin",
-            headers=self._polls_headers(),
-        )
-        response.raise_for_status()
-        return response.json()    
 
     def get_polls(self) -> list[dict[str, Any]]:
         response = self._request("GET", "/apps/polls/polls")

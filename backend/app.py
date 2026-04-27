@@ -1626,7 +1626,7 @@ def set_poll_share_admin(share_token: str, request: Request):
     except NextcloudApiError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Co-Autor konnte nicht hinzugefügt werden: {exc}",
+            detail=f"Co-Autor konnte nicht hinzugefügt werden: {type(exc).__name__}: {exc}",
         ) from exc
 
 @app.delete("/polls/shares/{share_token}/admin")
@@ -1639,7 +1639,7 @@ def remove_poll_share_admin(share_token: str, request: Request):
     except NextcloudApiError as exc:
         raise HTTPException(
             status_code=502,
-            detail=f"Co-Autor konnte nicht entfernt werden: {exc}",
+            detail=f"Co-Autor konnte nicht entfernt werden: {type(exc).__name__}: {exc}",
         ) from exc
 
 @app.post("/polls/{poll_id}/shares")
