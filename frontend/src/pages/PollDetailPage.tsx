@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft } from 'lucide-react'
+import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus } from 'lucide-react'
 import IconButton from '../components/IconButton'
 
 import {
@@ -14,6 +14,7 @@ import {
   transferPollOwnership,
   fetchWritableCalendars,
   createPollCalendarEntries,
+  createPollShare,
   setPollShareAdmin,
   removePollShareAdmin,
   type PollDetail,
@@ -268,6 +269,11 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [transferError, setTransferError] = useState('')
   const [selectedNewAdminToken, setSelectedNewAdminToken] = useState('')
   const [selectedNewAdminLabel, setSelectedNewAdminLabel] = useState('')
+  
+  const [coAuthorSearch, setCoAuthorSearch] = useState('')
+  const [coAuthorSearchResults, setCoAuthorSearchResults] = useState<UserSearchResult[]>([])
+  const [selectedNewPollAdmins, setSelectedNewPollAdmins] = useState<UserSearchResult[]>([])
+  const [pollAdminConfirm, setPollAdminConfirm] = useState(false)
 
   const [showCalendarDialog, setShowCalendarDialog] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(false)
@@ -504,6 +510,23 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   }
 }
 
+  async function handleCoAuthorSearch(value: string) {
+    setCoAuthorSearch(value)
+
+    if (value.trim().length < 2) {
+      setCoAuthorSearchResults([])
+      return
+    }
+
+    try {
+      const results = await searchUsers(value)
+      setCoAuthorSearchResults(results)
+    } catch (error) {
+      console.error('Co-author search failed:', error)
+      setCoAuthorSearchResults([])
+    }
+  }
+
   function openTransferOwnerDialog() {
     setShowTransferOwnerDialog(true)
     setOwnerSearch('')
@@ -668,7 +691,54 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     }
   }
 
+  async function handleGrantSelectedPollAdmins() {
+    setPollAdminError('')
+    setPollAdminLoading(true)
 
+    try {
+      for (const user of selectedNewPollAdmins) {
+        let share = pollShares.find((item) => {
+          return item.user?.id === user.id || item.user?.userId === user.id
+        })
+
+        if (!share) {
+          share = await createPollShare(poll!.id, user.id)
+        }
+
+        await setPollShareAdmin(share.token)
+      }
+
+      setSelectedNewPollAdmins([])
+      setPollAdminConfirm(false)
+      await load()
+    } catch (error) {
+      setPollAdminError(
+        error instanceof Error
+          ? error.message
+          : 'Co-Autoren konnten nicht hinzugefügt werden.',
+      )
+    } finally {
+      setPollAdminLoading(false)
+    }
+  }
+
+  async function handleRemovePollAdmin(share: PollShare) {
+    setPollAdminError('')
+    setPollAdminLoading(true)
+
+    try {
+      await removePollShareAdmin(share.token)
+      await load()
+    } catch (error) {
+      setPollAdminError(
+        error instanceof Error
+          ? error.message
+          : 'Co-Autor konnte nicht entfernt werden.',
+      )
+    } finally {
+      setPollAdminLoading(false)
+    }
+  }
 
   function closeAuthorDialog() {
     setShowAuthorDialog(false)
@@ -680,6 +750,10 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     setTransferConfirm(false)
     setTransferError('')
 
+    setCoAuthorSearch('')
+    setCoAuthorSearchResults([])
+    setSelectedNewPollAdmins([])
+    setPollAdminConfirm(false)
     setPollAdminError('')
   }
 
@@ -975,6 +1049,28 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           )
         })}
       </div>
+    )
+  }
+
+  function addSelectedNewPollAdmin(user: UserSearchResult) {
+    const alreadySelected = selectedNewPollAdmins.some((item) => item.id === user.id)
+
+    const alreadyAdmin = pollAdmins.some((share) => {
+      return share.user?.id === user.id || share.user?.userId === user.id
+    })
+
+    if (alreadySelected || alreadyAdmin) {
+      return
+    }
+
+    setSelectedNewPollAdmins((current) => [...current, user])
+    setCoAuthorSearch('')
+    setCoAuthorSearchResults([])
+  }
+
+  function removeSelectedNewPollAdmin(userId: string) {
+    setSelectedNewPollAdmins((current) =>
+      current.filter((user) => user.id !== userId),
     )
   }
 
@@ -1768,7 +1864,99 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
               Co-Autoren erhalten zusätzliche Verwaltungsrechte für diese Umfrage.
             </div>
 
-            {pollAdmins.length === 0 ? (
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center',
+                marginBottom: '0.65rem',
+              }}
+            >
+              <input
+                type="text"
+                value={coAuthorSearch}
+                onChange={(e) => void handleCoAuthorSearch(e.target.value)}
+                placeholder="Co-Autor suchen"
+                style={{
+                  flex: 1,
+                  padding: '0.7rem 0.8rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.65rem',
+                  font: 'inherit',
+                  boxSizing: 'border-box',
+                }}
+              />
+
+              <IconButton
+                onClick={() => {
+                  if (coAuthorSearchResults.length === 1) {
+                    addSelectedNewPollAdmin(coAuthorSearchResults[0])
+                  }
+                }}
+                disabled={coAuthorSearchResults.length !== 1 || pollAdminLoading}
+                title="Co-Autor zur Liste hinzufügen"
+                icon={<Plus size={18} />}
+                variant="primary"
+                size={40}
+              />
+            </div>
+
+            {coAuthorSearchResults.length > 0 ? (
+              <div
+                style={{
+                  marginBottom: '0.85rem',
+                  maxHeight: '10rem',
+                  overflowY: 'auto',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.65rem',
+                  background: '#ffffff',
+                }}
+              >
+                {coAuthorSearchResults.map((user) => {
+                  const alreadySelected = selectedNewPollAdmins.some((item) => item.id === user.id)
+
+                  const alreadyAdmin = pollAdmins.some((share) => {
+                    return share.user?.id === user.id || share.user?.userId === user.id
+                  })
+
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      disabled={alreadySelected || alreadyAdmin}
+                      onClick={() => addSelectedNewPollAdmin(user)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        border: 'none',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: alreadySelected || alreadyAdmin ? '#f8fafc' : '#ffffff',
+                        padding: '0.8rem',
+                        cursor: alreadySelected || alreadyAdmin ? 'default' : 'pointer',
+                        opacity: alreadySelected || alreadyAdmin ? 0.6 : 1,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>
+                        {user.displayName || user.id}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                        {alreadyAdmin
+                          ? 'Bereits Co-Autor'
+                          : alreadySelected
+                            ? 'Bereits vorgemerkt'
+                            : user.id}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+
+            <div style={{ fontWeight: 600, marginBottom: '0.45rem' }}>
+              Eingetragene Co-Autoren
+            </div>
+
+            {pollAdmins.length === 0 && selectedNewPollAdmins.length === 0 ? (
               <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.85rem' }}>
                 Es sind noch keine Co-Autoren eingetragen.
               </div>
@@ -1800,7 +1988,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                         {share.user?.displayName || share.user?.id || share.token}
                       </div>
                       <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-                        {share.user?.emailAddress || share.user?.id}
+                        bereits aktiv
                       </div>
                     </div>
 
@@ -1808,7 +1996,40 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                       onClick={() => void handleRemovePollAdmin(share)}
                       disabled={pollAdminLoading}
                       title="Co-Autor entfernen"
-                      icon={<X size={18} />}
+                      icon={<Trash2 size={18} />}
+                      size={36}
+                    />
+                  </div>
+                ))}
+
+                {selectedNewPollAdmins.map((user) => (
+                  <div
+                    key={user.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      padding: '0.65rem 0.75rem',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '0.65rem',
+                      background: '#eff6ff',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600 }}>
+                        {user.displayName || user.id}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#2563eb' }}>
+                        neu vorgemerkt
+                      </div>
+                    </div>
+
+                    <IconButton
+                      onClick={() => removeSelectedNewPollAdmin(user.id)}
+                      disabled={pollAdminLoading}
+                      title="Vorgemerkten Co-Autor entfernen"
+                      icon={<Trash2 size={18} />}
                       size={36}
                     />
                   </div>
@@ -1816,79 +2037,47 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
               </div>
             )}
 
-            <div style={{ fontWeight: 600, marginBottom: '0.45rem' }}>
-              Co-Autor hinzufügen
-            </div>
+            {selectedNewPollAdmins.length > 0 ? (
+              <>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.6rem',
+                    marginTop: '0.9rem',
+                    fontSize: '0.92rem',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={pollAdminConfirm}
+                    onChange={(e) => setPollAdminConfirm(e.target.checked)}
+                    style={{ marginTop: '0.15rem' }}
+                  />
+                  <span>
+                    Ich bestätige, dass die vorgemerkten Bandmitglieder Co-Autor-Rechte erhalten sollen.
+                  </span>
+                </label>
 
-            {pollAdminCandidates.length === 0 ? (
-              <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
-                Keine weiteren eingeladenen Benutzer verfügbar.
-              </div>
-            ) : (
-              <div
-                style={{
-                  maxHeight: '12rem',
-                  overflowY: 'auto',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.65rem',
-                  background: '#ffffff',
-                }}
-              >
-                {pollAdminCandidates.map((share) => (
-                  <button
-                    key={share.token}
-                    type="button"
-                    onClick={() => {
-                      setSelectedNewAdminToken(share.token)
-                      setSelectedNewAdminLabel(
-                        share.user?.displayName || share.user?.id || share.token
-                      )
-                    }}
-                    disabled={pollAdminLoading}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      border: 'none',
-                      borderBottom: '1px solid #f1f5f9',
-                      background: '#ffffff',
-                      padding: '0.8rem',
-                      cursor: pollAdminLoading ? 'default' : 'pointer',
-                    }}
-                  >
-                    <div style={{ fontWeight: 600 }}>
-                      {share.user?.displayName || share.user?.id || share.token}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
-                      {share.user?.emailAddress || share.user?.id}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {selectedNewAdminToken ? (
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.6rem',
-                  marginTop: '0.9rem',
-                  fontSize: '0.92rem',
-                  lineHeight: 1.4,
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={transferConfirm}
-                  onChange={(e) => setTransferConfirm(e.target.checked)}
-                  style={{ marginTop: '0.15rem' }}
-                />
-                <span>
-                  Ich bestätige, dass <strong>{selectedNewAdminLabel}</strong> Co-Autor werden soll.
-                </span>
-              </label>
+                <div
+                  style={{
+                    marginTop: '0.85rem',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <IconButton
+                    onClick={() => void handleGrantSelectedPollAdmins()}
+                    disabled={!pollAdminConfirm || pollAdminLoading}
+                    title="Co-Autoren speichern"
+                    icon={<Check size={18} />}
+                    variant="primary"
+                    size={40}
+                  />
+                </div>
+              </>
             ) : null}
-
 
             {pollAdminError ? (
               <div style={{ marginTop: '0.75rem', color: '#b91c1c', fontSize: '0.9rem' }}>

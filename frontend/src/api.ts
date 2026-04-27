@@ -546,4 +546,28 @@ export async function removePollShareAdmin(shareToken: string): Promise<PollShar
   return data.share
 }
 
+export async function createPollShare(
+  pollId: string,
+  userId: string,
+): Promise<PollShare> {
+  const response = await fetch(`${API_BASE}/polls/${pollId}/shares`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Benutzer konnte nicht zur Umfrage hinzugefügt werden.')
+  }
+
+  const data = await response.json()
+  return data.share
+}
+
 let cachedRequestToken: string | null = null
