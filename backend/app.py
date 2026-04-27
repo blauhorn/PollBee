@@ -1174,6 +1174,26 @@ def toggle_poll_closed(poll_id: str, request: Request):
     poll_data = raw_poll_response.get("poll", raw_poll_response)
 
     if not is_current_user_poll_admin(poll_data, session):
+        print("DEBUG poll admin check failed", {
+            "poll_id": poll_id,
+            "current_user": session.user_id,
+            "owner_id": extract_owner_id(poll_data),
+            "share_count": len(poll_data.get("shares", []) or []),
+            "shares": [
+                {
+                    "token": share.get("token"),
+                    "deleted": share.get("deleted"),
+                    "user_id": (share.get("user") or {}).get("id"),
+                    "user_userId": (share.get("user") or {}).get("userId"),
+                    "user_user": (share.get("user") or {}).get("user"),
+                    "email": (share.get("user") or {}).get("emailAddress"),
+                    "isUnrestrictedOwner": (share.get("user") or {}).get("isUnrestrictedOwner"),
+                }
+                for share in (poll_data.get("shares", []) or [])
+                if isinstance(share, dict)
+            ],
+        })
+    
         raise HTTPException(
             status_code=403,
             detail="Nur Eigentümer oder Co-Autoren dürfen die Umfrage verwalten.",
@@ -1557,6 +1577,26 @@ def create_poll_calendar_events(
     poll_data = raw_poll_response.get("poll", raw_poll_response)
 
     if not is_current_user_poll_admin(poll_data, session):
+        print("DEBUG poll admin check failed", {
+            "poll_id": poll_id,
+            "current_user": session.user_id,
+            "owner_id": extract_owner_id(poll_data),
+            "share_count": len(poll_data.get("shares", []) or []),
+            "shares": [
+                {
+                    "token": share.get("token"),
+                    "deleted": share.get("deleted"),
+                    "user_id": (share.get("user") or {}).get("id"),
+                    "user_userId": (share.get("user") or {}).get("userId"),
+                    "user_user": (share.get("user") or {}).get("user"),
+                    "email": (share.get("user") or {}).get("emailAddress"),
+                    "isUnrestrictedOwner": (share.get("user") or {}).get("isUnrestrictedOwner"),
+                }
+                for share in (poll_data.get("shares", []) or [])
+                if isinstance(share, dict)
+            ],
+        })
+    
         raise HTTPException(
             status_code=403,
             detail="Nur Eigentümer oder Co-Autoren dürfen die Umfrage verwalten.",
