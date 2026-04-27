@@ -79,19 +79,8 @@ class NextcloudClient:
             "NC-Polls-Client-Time-Zone": "Europe/Berlin",
         }
 
-    def set_poll_share_admin(self, share_token: str) -> dict[str, Any]:
-        return self._request(
-            "PUT",
-            f"/apps/polls/share/{share_token}/admin",
-            headers={
-                "Accept": "application/json",
-                "X-Requested-With": "XMLHttpRequest",
-                "NC-Polls-Client-Id": "pollbee",
-                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
-            },
-        )   
-    def remove_poll_share_admin(self, share_token: str) -> dict[str, Any]:
-        return self._request(
+    def set_poll_share_admin(self, share_token: str):
+        response = self._request(
             "PUT",
             f"/apps/polls/share/{share_token}/admin",
             headers={
@@ -101,6 +90,31 @@ class NextcloudClient:
                 "NC-Polls-Client-Time-Zone": "Europe/Berlin",
             },
         )
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise NextcloudApiError(
+                f"Set share admin failed with status {response.status_code}: {response.text[:500]}"
+            ) from exc   
+    def remove_poll_share_admin(self, share_token: str):
+        response = self._request(
+            "PUT",
+            f"/apps/polls/share/{share_token}/admin",
+            headers={
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "NC-Polls-Client-Id": "pollbee",
+                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
+            },
+        )
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise NextcloudApiError(
+                f"Remove share admin failed with status {response.status_code}: {response.text[:500]}"
+            ) from exc
 
     def get_polls(self) -> list[dict[str, Any]]:
         response = self._request("GET", "/apps/polls/polls")
