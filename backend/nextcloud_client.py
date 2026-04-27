@@ -100,7 +100,7 @@ class NextcloudClient:
     def remove_poll_share_admin(self, share_token: str):
         response = self._request(
             "PUT",
-            f"/apps/polls/share/{share_token}/admin",
+            f"/apps/polls/share/{share_token}/user",
             headers={
                 "Accept": "application/json",
                 "X-Requested-With": "XMLHttpRequest",
