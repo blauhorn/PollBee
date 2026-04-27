@@ -266,6 +266,8 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [transferConfirm, setTransferConfirm] = useState(false)
   const [transferLoading, setTransferLoading] = useState(false)
   const [transferError, setTransferError] = useState('')
+  const [selectedNewAdminToken, setSelectedNewAdminToken] = useState('')
+  const [selectedNewAdminLabel, setSelectedNewAdminLabel] = useState('')
 
   const [showCalendarDialog, setShowCalendarDialog] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(false)
@@ -1836,7 +1838,12 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                   <button
                     key={share.token}
                     type="button"
-                    onClick={() => void handleMakePollAdmin(share)}
+                    onClick={() => {
+                      setSelectedNewAdminToken(share.token)
+                      setSelectedNewAdminLabel(
+                        share.user?.displayName || share.user?.id || share.token
+                      )
+                    }}
                     disabled={pollAdminLoading}
                     style={{
                       width: '100%',
@@ -1858,6 +1865,30 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                 ))}
               </div>
             )}
+
+            {selectedNewAdminToken ? (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.6rem',
+                  marginTop: '0.9rem',
+                  fontSize: '0.92rem',
+                  lineHeight: 1.4,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={transferConfirm}
+                  onChange={(e) => setTransferConfirm(e.target.checked)}
+                  style={{ marginTop: '0.15rem' }}
+                />
+                <span>
+                  Ich bestätige, dass <strong>{selectedNewAdminLabel}</strong> Co-Autor werden soll.
+                </span>
+              </label>
+            ) : null}
+
 
             {pollAdminError ? (
               <div style={{ marginTop: '0.75rem', color: '#b91c1c', fontSize: '0.9rem' }}>
@@ -1881,6 +1912,32 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
               icon={<X size={18} />}
               size={40}
             />
+
+          <div
+            style={{
+              marginTop: '0.85rem',
+              display: 'flex',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <IconButton
+              onClick={async () => {
+                if (!selectedNewAdminToken) return
+                await handleMakePollAdmin(
+                  pollShares.find((s) => s.token === selectedNewAdminToken)!
+                )
+                setSelectedNewAdminToken('')
+                setSelectedNewAdminLabel('')
+                setTransferConfirm(false)
+              }}
+              disabled={!selectedNewAdminToken || !transferConfirm || pollAdminLoading}
+              title="Co-Autor hinzufügen"
+              icon={<Check size={18} />}
+              variant="primary"
+              size={40}
+            />
+          </div>
+
           </div>
         </div>
       </div>
