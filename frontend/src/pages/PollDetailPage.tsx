@@ -704,7 +704,9 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           share = await createPollShare(poll!.id, user.id)
         }
 
-        await setPollShareAdmin(share.token)
+        if (!share.user?.isUnrestrictedOwner) {
+          await setPollShareAdmin(share.token)
+        }
       }
 
       setSelectedNewPollAdmins([])
