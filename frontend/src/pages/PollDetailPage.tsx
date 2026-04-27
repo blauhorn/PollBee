@@ -2102,30 +2102,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
               size={40}
             />
 
-          <div
-            style={{
-              marginTop: '0.85rem',
-              display: 'flex',
-              justifyContent: 'flex-end',
-            }}
-          >
-            <IconButton
-              onClick={async () => {
-                if (!selectedNewAdminToken) return
-                await handleMakePollAdmin(
-                  pollShares.find((s) => s.token === selectedNewAdminToken)!
-                )
-                setSelectedNewAdminToken('')
-                setSelectedNewAdminLabel('')
-                setTransferConfirm(false)
-              }}
-              disabled={!selectedNewAdminToken || !transferConfirm || pollAdminLoading}
-              title="Co-Autor hinzufügen"
-              icon={<Check size={18} />}
-              variant="primary"
-              size={40}
-            />
-          </div>
+         
 
           </div>
         </div>
