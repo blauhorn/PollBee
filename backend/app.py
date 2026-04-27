@@ -1617,27 +1617,30 @@ def create_poll(payload: CreatePollPayload, request: Request):
     }
 
 @app.put("/polls/shares/{share_token}/admin")
-def set_poll_share_admin(share_token: str):
+def set_poll_share_admin(share_token: str, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
     try:
-        client = get_nextcloud_client()
         return client.set_poll_share_admin(share_token)
-    except Exception as exc:
+    except NextcloudApiError as exc:
         raise HTTPException(
             status_code=502,
             detail=f"Co-Autor konnte nicht hinzugefügt werden: {exc}",
-        )
-
+        ) from exc
 
 @app.delete("/polls/shares/{share_token}/admin")
-def remove_poll_share_admin(share_token: str):
+def remove_poll_share_admin(share_token: str, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
     try:
-        client = get_nextcloud_client()
         return client.remove_poll_share_admin(share_token)
-    except Exception as exc:
+    except NextcloudApiError as exc:
         raise HTTPException(
             status_code=502,
             detail=f"Co-Autor konnte nicht entfernt werden: {exc}",
-        )
+        ) from exc
 
 @app.post("/polls/{poll_id}/shares")
 def create_poll_share(poll_id: str, payload: dict, request: Request):
