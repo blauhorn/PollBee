@@ -61,7 +61,10 @@ export type User = {
 
 export type PollPermissions = {
   isOwner: boolean
+  isPollAdmin: boolean
   canToggleClosed: boolean
+  canManagePoll: boolean
+  canManageAuthors: boolean
 }
 
 export type PollDetail = {
@@ -82,6 +85,7 @@ export type PollDetail = {
   currentVotes?: Record<string, VoteValue>
   currentUser?: User
   permissions: PollPermissions
+  shares?: PollShare[]
 }
 
 export type RegisterMember = {
@@ -180,6 +184,25 @@ export type CreatePollPayload = {
 export type CreatePollResponse = {
   ok: boolean
   pollId: string
+}
+
+export type PollShareUser = {
+  id: string
+  userId?: string
+  displayName?: string
+  emailAddress?: string
+  isUnrestrictedOwner?: boolean
+  isGuest?: boolean
+  isNoUser?: boolean
+}
+
+export type PollShare = {
+  id: number
+  token: string
+  type: string
+  pollId: number
+  user?: PollShareUser
+  deleted?: boolean
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/pollapp/api'
@@ -481,6 +504,46 @@ export async function createPoll(
   }
 
   return response.json()
+}
+
+export async function setPollShareAdmin(shareToken: string): Promise<PollShare> {
+  const response = await fetch(
+    `${API_BASE}/polls/shares/${encodeURIComponent(shareToken)}/admin`,
+    {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error('Co-Autor konnte nicht hinzugefügt werden.')
+  }
+
+  const data = await response.json()
+  return data.share
+}
+
+export async function removePollShareAdmin(shareToken: string): Promise<PollShare> {
+  const response = await fetch(
+    `${API_BASE}/polls/shares/${encodeURIComponent(shareToken)}/admin`,
+    {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error('Co-Autor konnte nicht entfernt werden.')
+  }
+
+  const data = await response.json()
+  return data.share
 }
 
 let cachedRequestToken: string | null = null

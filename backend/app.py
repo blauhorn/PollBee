@@ -840,6 +840,66 @@ def get_poll_by_id(poll_id: str, request: Request):
 
     is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
 
+    raw_shares = (
+    poll_data.get("shares", [])
+    or raw_poll_response.get("shares", [])
+    or []
+    )
+
+    shares = []
+    is_poll_admin = is_owner
+
+    for share in raw_shares:
+        if not isinstance(share, dict):
+            continue
+
+        user = share.get("user") or {}
+        if not isinstance(user, dict):
+            user = {}
+
+        share_user_id = str(
+            user.get("userId")
+            or user.get("id")
+            or user.get("user")
+            or user.get("emailAddress")
+            or ""
+        ).strip()
+
+        is_unrestricted_owner = bool(user.get("isUnrestrictedOwner"))
+
+        if (
+            share_user_id
+            and share_user_id == str(session.user_id).strip()
+            and is_unrestricted_owner
+            and not share.get("deleted", False)
+        ):
+            is_poll_admin = True
+
+        shares.append(
+            {
+                "id": share.get("id"),
+                "token": share.get("token"),
+                "type": share.get("type"),
+                "pollId": share.get("pollId"),
+                "groupId": share.get("groupId"),
+                "label": share.get("label", ""),
+                "deleted": bool(share.get("deleted", False)),
+                "locked": bool(share.get("locked", False)),
+                "user": {
+                    "id": share_user_id,
+                    "userId": user.get("userId"),
+                    "user": user.get("user"),
+                    "displayName": user.get("displayName") or share_user_id,
+                    "emailAddress": user.get("emailAddress"),
+                    "isAdmin": bool(user.get("isAdmin", False)),
+                    "isGuest": bool(user.get("isGuest", False)),
+                    "isNoUser": bool(user.get("isNoUser", False)),
+                    "isUnrestrictedOwner": is_unrestricted_owner,
+                    "type": user.get("type"),
+                },
+            }
+        )
+
     raw_comments = (
         poll_data.get("comments", [])
         or raw_poll_response.get("comments", [])
@@ -1055,8 +1115,13 @@ def get_poll_by_id(poll_id: str, request: Request):
         },
         "permissions": {
             "isOwner": is_owner,
-            "canToggleClosed": is_owner,
+            "isPollAdmin": is_poll_admin,
+            "canToggleClosed": is_poll_admin,
+            "canManagePoll": is_poll_admin,
+            "canManageAuthors": is_owner,
         },
+        "shares": shares,
+        
     }
 
 @app.post("/polls/{poll_id}/toggle-closed")
@@ -1551,3 +1616,25 @@ def create_poll(payload: CreatePollPayload, request: Request):
         "pollId": poll_id,
     }
 
+@app.put("/polls/shares/{share_token}/admin")
+def set_poll_share_admin(share_token: str):
+    try:
+        client = get_nextcloud_client()
+        return client.set_poll_share_admin(share_token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Co-Autor konnte nicht hinzugefügt werden: {exc}",
+        )
+
+
+@app.delete("/polls/shares/{share_token}/admin")
+def remove_poll_share_admin(share_token: str):
+    try:
+        client = get_nextcloud_client()
+        return client.remove_poll_share_admin(share_token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Co-Autor konnte nicht entfernt werden: {exc}",
+        )
