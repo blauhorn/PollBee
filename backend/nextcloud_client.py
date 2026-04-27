@@ -897,3 +897,21 @@ class NextcloudClient:
                 f"Share creation failed with status {response.status_code}: {response.text[:500]}"
             ) from exc
     
+    def delete_poll_share(self, share_token: str):
+        response = self._request(
+            "DELETE",
+            f"/apps/polls/share/{share_token}",
+            headers={
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "NC-Polls-Client-Id": "pollbee",
+                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
+            },
+        )
+
+        try:
+            return response.json()
+        except ValueError as exc:
+            raise NextcloudApiError(
+                f"Delete share failed with status {response.status_code}: {response.text[:500]}"
+            ) from exc

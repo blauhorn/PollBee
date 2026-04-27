@@ -1635,8 +1635,9 @@ def remove_poll_share_admin(share_token: str, request: Request):
     client = build_client_from_session(session)
 
     try:
-        return client.remove_poll_share_admin(share_token)
-    except NextcloudApiError as exc:
+        client.remove_poll_share_admin(share_token)
+        return client.delete_poll_share(share_token)
+    except Exception as exc:
         raise HTTPException(
             status_code=502,
             detail=f"Co-Autor konnte nicht entfernt werden: {type(exc).__name__}: {exc}",
