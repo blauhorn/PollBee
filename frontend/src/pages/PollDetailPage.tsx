@@ -669,7 +669,15 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
 
   function closeAuthorDialog() {
-    closeTransferOwnerDialog()
+    setShowAuthorDialog(false)
+
+    setOwnerSearch('')
+    setOwnerSearchResults([])
+    setSelectedNewOwnerId('')
+    setSelectedNewOwnerLabel('')
+    setTransferConfirm(false)
+    setTransferError('')
+
     setPollAdminError('')
   }
 
