@@ -1168,7 +1168,7 @@ def toggle_poll_closed(poll_id: str, request: Request):
     configuration = poll_data.get("configuration", {})
 
     owner_id = extract_owner_id(poll_data)
-    is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
+   
 
     raw_poll_response = client.get_poll(poll_id)
     poll_data = raw_poll_response.get("poll", raw_poll_response)
@@ -1551,7 +1551,7 @@ def create_poll_calendar_events(
 
     poll_data = raw_poll_response.get("poll", raw_poll_response)
     owner_id = extract_owner_id(poll_data)
-    is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
+    
 
     raw_poll_response = client.get_poll(poll_id)
     poll_data = raw_poll_response.get("poll", raw_poll_response)
