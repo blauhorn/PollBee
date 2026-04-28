@@ -179,6 +179,7 @@ export type CreatePollPayload = {
   description: string
   options: CreatePollOptionInput[]
   allowMaybe: boolean
+  shareGroupIds: string[]
 }
 
 export type CreatePollResponse = {
@@ -203,6 +204,11 @@ export type PollShare = {
   pollId: number
   user?: PollShareUser
   deleted?: boolean
+}
+
+export type GroupOption = {
+  id: string
+  displayName: string
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/pollapp/api'
@@ -499,17 +505,18 @@ export async function createPollCalendarEntries(
   return response.json()
 }
 
-export async function createPoll(
-  payload: CreatePollPayload,
-): Promise<CreatePollResponse> {
-  const response = await apiFetch('/polls', {
+async function createPoll(payload: CreatePollPayload) {
+  const response = await fetch(`${API_BASE}/polls`, {
     method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(payload),
   })
 
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(text || `Create poll failed: ${response.status}`)
+    throw new Error('Umfrage konnte nicht erstellt werden.')
   }
 
   return response.json()
@@ -581,6 +588,19 @@ export async function createPollShare(
 
   const data = await response.json()
   return data.share
+}
+
+export async function fetchShareGroups(): Promise<GroupOption[]> {
+  const response = await fetch(`${API_BASE}/groups`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new Error('Gruppen konnten nicht geladen werden.')
+  }
+
+  const data = await response.json()
+  return data.groups ?? []
 }
 
 let cachedRequestToken: string | null = null

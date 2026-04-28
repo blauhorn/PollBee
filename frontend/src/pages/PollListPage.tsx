@@ -1,7 +1,7 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
-import { fetchMe, fetchPolls, createPoll, type Poll, type PollOption, type CreatePollOptionInput, type User } from '../api'
+import { fetchMe, fetchPolls, createPoll, fetchShareGroups, type Poll, type PollOption, type CreatePollOptionInput, type User, type GroupOption } from '../api'
 import IconButton from '../components/IconButton'
 import { LogOut } from 'lucide-react'
 import {showSuccess, showError, showLoading} from '../utils/toast'
@@ -9,6 +9,7 @@ import {showSuccess, showError, showLoading} from '../utils/toast'
 type PollListPageProps = {
   initialFilter?: string
 }
+
 
 function formatCreatedDate(ts?: number): string {
   if (!ts) return ''
@@ -280,6 +281,10 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   ])
   const [saveMessage, setSaveMessage] = useState('')
 
+  const [availableShareGroups, setAvailableShareGroups] = useState<GroupOption[]>([])
+  const [selectedShareGroupIds, setSelectedShareGroupIds] = useState<string[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
+
   useEffect(() => {
     async function load() {
       try {
@@ -416,15 +421,29 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
   const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
-  function openCreatePollDialog() {
-  setShowCreatePollDialog(true)
-  setCreatePollError('')
-  setNewPollTitle('')
-  setNewPollDescription('')
-  setNewPollAllowMaybe(true)
-  setNewPollOptions([
-    { id: crypto.randomUUID(), date: '', time: '19:30' },
-  ])
+  async function openCreatePollDialog() {
+    // Dialog öffnen + alles zurücksetzen
+    setShowCreatePollDialog(true)
+    setCreatePollError('')
+    setNewPollTitle('')
+    setNewPollDescription('')
+    setNewPollAllowMaybe(true)
+    setNewPollOptions([
+      { id: crypto.randomUUID(), date: '', time: '19:30' },
+    ])
+
+    // neue Teile
+    setSelectedShareGroupIds([])
+    setAvailableShareGroups([]) // optional: sorgt für "leeren" Zustand beim Laden
+    setLoadingGroups(true)
+    try {
+      const groups = await fetchShareGroups()
+      setAvailableShareGroups(groups)
+    } catch (error) {
+      console.error(error)
+      setCreatePollError('Gruppen konnten nicht geladen werden.')
+    } finally {
+      setLoadingGroups(false)
   }
 
   function closeCreatePollDialog() {
@@ -526,6 +545,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         description,
         options: parsedOptions,
         allowMaybe: newPollAllowMaybe,
+        shareGroupIds: selectedShareGroupIds,
       })
 
       setShowCreatePollDialog(false)
@@ -1273,6 +1293,57 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                 />
                 <span>„Vielleicht“ erlauben</span>
               </label>
+
+              <div style={{ display: 'grid', gap: '0.45rem' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                    Teilen mit Gruppen
+                  </div>
+
+                  <div
+                    style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      padding: '0.65rem 0.75rem',
+                      display: 'grid',
+                      gap: '0.45rem',
+                      maxHeight: '10rem',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {availableShareGroups.length === 0 ? (
+                      <div style={{ color: '#64748b', fontSize: '0.88rem' }}>
+                        Keine Gruppen verfügbar.
+                      </div>
+                    ) : (
+                      availableShareGroups.map((group) => (
+                        <label
+                          key={group.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.55rem',
+                            fontSize: '0.92rem',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedShareGroupIds.includes(group.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedShareGroupIds((current) => [...current, group.id])
+                              } else {
+                                setSelectedShareGroupIds((current) =>
+                                  current.filter((id) => id !== group.id),
+                                )
+                              }
+                            }}
+                          />
+                          <span>{group.displayName || group.id}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
 
               <div style={{ display: 'grid', gap: '0.45rem' }}>
                 <div

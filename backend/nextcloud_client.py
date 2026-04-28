@@ -621,6 +621,7 @@ class NextcloudClient:
         description: str,
         options: list[Any],
         allow_maybe: bool,
+        share_group_ids: list[str] | None = None,
     ) -> dict[str, Any]:
 
         response = self._request(
@@ -664,10 +665,7 @@ class NextcloudClient:
         for option in options:
             timestamp = int(option.timestamp)
 
-            # Wichtig: explizit Europe/Berlin
             dt = datetime.fromtimestamp(timestamp, tz=berlin)
-
-            # Für datePoll besser auf Tagesanfang normieren
             dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
 
             iso_timestamp = dt.isoformat()
@@ -733,8 +731,26 @@ class NextcloudClient:
                 allow_maybe=allow_maybe,
             )
 
-        return {"pollId": poll_id}
+        failed_group_shares: list[str] = []
 
+        for group_id in share_group_ids or []:
+            try:
+                self.create_poll_group_share(poll_id, group_id)
+            except NextcloudApiError as exc:
+                print(
+                    "DEBUG nextcloud group share failed:",
+                    {
+                        "poll_id": poll_id,
+                        "group_id": group_id,
+                        "error": str(exc),
+                    },
+                )
+                failed_group_shares.append(group_id)
+
+        return {
+            "pollId": poll_id,
+            "failedGroupShares": failed_group_shares,
+        }
     def update_poll_description(
         self,
         *,
@@ -874,12 +890,12 @@ class NextcloudClient:
 
         return fallback_hour, fallback_minute
     
-    def create_poll_share(self, poll_id: str, user_id: str):
+    def create_poll_share(self, poll_id: str, user_id: str, share_type: str = "user"):
         response = self._request(
             "POST",
             f"/apps/polls/poll/{poll_id}/share",
             json_data={
-                "type": "user",
+                "type": share_type,
                 "userId": user_id,
             },
             headers={
@@ -896,6 +912,14 @@ class NextcloudClient:
             raise NextcloudApiError(
                 f"Share creation failed with status {response.status_code}: {response.text[:500]}"
             ) from exc
+
+
+    def create_poll_group_share(self, poll_id: str, group_id: str):
+        return self.create_poll_share(
+            poll_id=poll_id,
+            user_id=group_id,
+            share_type="group",
+        )
     
     def delete_poll_share(self, share_token: str):
         response = self._request(

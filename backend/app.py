@@ -80,6 +80,13 @@ class CreatePollPayload(BaseModel):
     options: list[CreatePollOptionPayload]
     allowMaybe: bool = True
 
+class CreatePollRequest(BaseModel):
+    title: str
+    description: str = ""
+    allowMaybe: bool = True
+    options: list[CreatePollOptionRequest]
+    shareGroupIds: list[str] = []
+
 def first_nonempty_str(*values):
     for value in values:
         if value is None:
@@ -1654,6 +1661,7 @@ def create_poll(payload: CreatePollPayload, request: Request):
             description=description,
             options=options,
             allow_maybe=allow_maybe,
+            share_group_ids=payload.shareGroupIds,
         )
     except NextcloudApiError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
