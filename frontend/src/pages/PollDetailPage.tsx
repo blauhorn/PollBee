@@ -1,7 +1,8 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft } from 'lucide-react'
+import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus } from 'lucide-react'
 import IconButton from '../components/IconButton'
+import {showSuccess, showError, showLoading} from '../utils/toast'
 
 import {
   fetchMe,
@@ -14,6 +15,9 @@ import {
   transferPollOwnership,
   fetchWritableCalendars,
   createPollCalendarEntries,
+  createPollShare,
+  setPollShareAdmin,
+  removePollShareAdmin,
   type PollDetail,
   type PollOption,
   type PollParticipant,
@@ -22,6 +26,7 @@ import {
   type WritableCalendar,
   type User,
   type VoteValue,
+  type PollShare,
 } from '../api'
 
 function PollDetailActions({
@@ -253,7 +258,9 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({})
   const [toggleBusy, setToggleBusy] = useState(false)
 
-  const [showTransferOwnerDialog, setShowTransferOwnerDialog] = useState(false)
+  const [showAuthorDialog, setShowAuthorDialog] = useState(false)
+  const [pollAdminLoading, setPollAdminLoading] = useState(false)
+  const [pollAdminError, setPollAdminError] = useState('')
   const [ownerSearch, setOwnerSearch] = useState('')
   const [ownerSearchResults, setOwnerSearchResults] = useState<UserSearchResult[]>([])
   const [selectedNewOwnerId, setSelectedNewOwnerId] = useState('')
@@ -261,6 +268,13 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [transferConfirm, setTransferConfirm] = useState(false)
   const [transferLoading, setTransferLoading] = useState(false)
   const [transferError, setTransferError] = useState('')
+  const [selectedNewAdminToken, setSelectedNewAdminToken] = useState('')
+  const [selectedNewAdminLabel, setSelectedNewAdminLabel] = useState('')
+  
+  const [coAuthorSearch, setCoAuthorSearch] = useState('')
+  const [coAuthorSearchResults, setCoAuthorSearchResults] = useState<UserSearchResult[]>([])
+  const [selectedNewPollAdmins, setSelectedNewPollAdmins] = useState<UserSearchResult[]>([])
+  const [pollAdminConfirm, setPollAdminConfirm] = useState(false)
 
   const [showCalendarDialog, setShowCalendarDialog] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(false)
@@ -280,8 +294,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 > ({})
 
   
-  useEffect(() => {
-  async function load() {
+  async function loadPollDetail() {
     if (!pollId) {
       navigate('/polls', { replace: true })
       return
@@ -319,14 +332,14 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           message: 'Die angeforderte Umfrage wurde nicht gefunden oder konnte nicht geladen werden.',
         },
       })
-      return
     } finally {
       setLoading(false)
     }
   }
 
-  void load()
-}, [pollId, navigate])
+  useEffect(() => {
+    void loadPollDetail()
+  }, [pollId])
 
   function buildPollAppUrl(pollId: string) {
     return new URL(`${BASE_PATH}polls/${pollId}`, window.location.origin).toString()
@@ -387,7 +400,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         }
       }
 
-      setSaveMessage('Deine Stimme wurde erfolgreich gespeichert.')
+      showSuccess('Deine Stimme wurde gespeichert.')
 
       const [refreshed, registerData] = await Promise.all([
         fetchPollById(pollId),
@@ -396,8 +409,6 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
       setPoll(refreshed)
       setVoteValues(refreshed.currentVotes ?? {})
-
-  
       setRegisterSummary(registerData)
     } catch (err) {
       const message =
@@ -408,7 +419,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         return
       }
 
-      setSaveMessage(`Fehler beim Speichern: ${message}`)
+      showError(`Fehler beim Speichern: ${message}`)
     } finally {
       setSaving(false)
     }
@@ -470,9 +481,10 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     try {
       const result = await togglePollClosed(poll.id)
       setPoll(result.poll)
+      showSuccess('Umfragestatus wurde geändert')
     } catch (err) {
       console.error(err)
-      alert('Der Status der Umfrage konnte nicht geändert werden.')
+      showError('Der Status der Umfrage konnte nicht geändert werden.')
     } finally {
       setToggleBusy(false)
     }
@@ -497,8 +509,25 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   }
 }
 
+  async function handleCoAuthorSearch(value: string) {
+    setCoAuthorSearch(value)
+
+    if (value.trim().length < 2) {
+      setCoAuthorSearchResults([])
+      return
+    }
+
+    try {
+      const results = await searchUsers(value)
+      setCoAuthorSearchResults(results)
+    } catch (error) {
+      console.error('Co-author search failed:', error)
+      setCoAuthorSearchResults([])
+    }
+  }
+
   function openTransferOwnerDialog() {
-    setShowTransferOwnerDialog(true)
+    setShowAuthorDialog(true)
     setOwnerSearch('')
     setOwnerSearchResults([])
     setSelectedNewOwnerId('')
@@ -509,7 +538,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
   function closeTransferOwnerDialog() {
     if (transferLoading) return
-    setShowTransferOwnerDialog(false)
+    setShowAuthorDialog(false)
   }
 
   async function handleTransferOwnership() {
@@ -521,12 +550,22 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     setTransferError('')
 
     try {
-      const result = await transferPollOwnership(poll.id, selectedNewOwnerId)
-      setPoll(result.poll)
-      setShowTransferOwnerDialog(false)
+      await transferPollOwnership(poll.id, selectedNewOwnerId)
+
+      setShowAuthorDialog(false)
+      showSuccess('Eigentümer erfolgreich übertragen')
+
+      await loadPollDetail()
     } catch (error) {
       console.error(error)
-      setTransferError('Eigentümerschaft konnte nicht übertragen werden.')
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Eigentümerschaft konnte nicht übertragen werden.'
+
+      setTransferError(message)
+      showError(message)
     } finally {
       setTransferLoading(false)
     }
@@ -597,7 +636,9 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
       }))
 
     if (optionSelections.length === 0) {
-      setCalendarError('Bitte mindestens eine Option auswählen.')
+      const message = 'Bitte mindestens eine Option auswählen.'
+      setCalendarError(message)
+      showError(message)
       setCalendarSaving(false)
       return
     }
@@ -615,18 +656,125 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         pollAppUrl,
       })
 
-      setCalendarSuccess(`${result.createdCount} Kalendereinträge erzeugt.`)
+      showSuccess(`${result.createdCount} Kalendereinträge erzeugt.`)
       setShowCalendarDialog(false)
     } catch (error) {
       console.error(error)
-      setCalendarError(
+
+      const message =
         error instanceof Error
           ? error.message
           : 'Kalendereinträge konnten nicht erzeugt werden.'
-      )
+
+      setCalendarError(message)
+      showError(message)
     } finally {
       setCalendarSaving(false)
     }
+  }
+  async function handleMakePollAdmin(share: PollShare) {
+    setPollAdminError('')
+    setPollAdminLoading(true)
+
+    try {
+      await setPollShareAdmin(share.token)
+      await loadPollDetail()
+    } catch (error) {
+      setPollAdminError(
+        error instanceof Error ? error.message : 'Co-Autor konnte nicht hinzugefügt werden.',
+      )
+    } finally {
+      setPollAdminLoading(false)
+    }
+  }
+
+  async function handleGrantSelectedPollAdmins() {
+    setPollAdminError('')
+    setPollAdminLoading(true)
+
+    try {
+      for (const user of selectedNewPollAdmins) {
+        let share = pollShares.find((item) => {
+          return item.user?.id === user.id || item.user?.userId === user.id
+        })
+
+        if (!share) {
+          share = await createPollShare(poll!.id, user.id)
+        }
+
+        if (!share.token) {
+          throw new Error(
+            `Kein Share-Token für ${user.displayName || user.id} erhalten.`,
+          )
+        }
+
+        await setPollShareAdmin(share.token)
+      }
+
+      setSelectedNewPollAdmins([])
+      setPollAdminConfirm(false)
+      await loadPollDetail()
+
+      showSuccess('Co-Autor(en) hinzugefügt')
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Co-Autoren konnten nicht hinzugefügt werden.'
+
+      setPollAdminError(message)
+      showError(message)
+    } finally {
+      setPollAdminLoading(false)
+    }
+  }
+
+  async function handleRemovePollAdmin(share: PollShare) {
+    setPollAdminError('')
+    setPollAdminLoading(true)
+
+    try {
+      await removePollShareAdmin(share.token)
+      await loadPollDetail()
+
+      showSuccess('Co-Autor entfernt')
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Co-Autor konnte nicht entfernt werden.'
+
+      setPollAdminError(message)
+      showError(message)
+    } finally {
+      setPollAdminLoading(false)
+    }
+  }
+
+  function closeAuthorDialog() {
+    setShowAuthorDialog(false)
+
+    setOwnerSearch('')
+    setOwnerSearchResults([])
+    setSelectedNewOwnerId('')
+    setSelectedNewOwnerLabel('')
+    setTransferConfirm(false)
+    setTransferError('')
+
+    setCoAuthorSearch('')
+    setCoAuthorSearchResults([])
+    setSelectedNewPollAdmins([])
+    setPollAdminConfirm(false)
+    setPollAdminError('')
+  }
+
+  function openAuthorDialog() {
+    setShowAuthorDialog(true)
+    setPollAdminError('')
+    setTransferError('')
+    setTransferConfirm(false)
+    setSelectedNewOwnerId('')
+    setSelectedNewOwnerLabel('')
   }
 
   const optionDetails = useMemo(() => {
@@ -915,6 +1063,28 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     )
   }
 
+  function addSelectedNewPollAdmin(user: UserSearchResult) {
+    const alreadySelected = selectedNewPollAdmins.some((item) => item.id === user.id)
+
+    const alreadyAdmin = pollAdmins.some((share) => {
+      return share.user?.id === user.id || share.user?.userId === user.id
+    })
+
+    if (alreadySelected || alreadyAdmin) {
+      return
+    }
+
+    setSelectedNewPollAdmins((current) => [...current, user])
+    setCoAuthorSearch('')
+    setCoAuthorSearchResults([])
+  }
+
+  function removeSelectedNewPollAdmin(userId: string) {
+    setSelectedNewPollAdmins((current) =>
+      current.filter((user) => user.id !== userId),
+    )
+  }
+
   if (loading) {
     return <p style={{ padding: '1rem' }}>Lade Poll-Details...</p>
   }
@@ -943,6 +1113,24 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
   const owner = getPollOwner(poll)
   const created = getPollCreated(poll)
+  const pollShares: PollShare[] = poll?.shares ?? []
+
+  const pollAdmins = pollShares.filter((share) => {
+    if (share.deleted) return false
+    if (!share.user?.isUnrestrictedOwner) return false
+    if (share.user.id === poll?.owner?.id) return false
+    return true
+  })
+
+  const isPollAdmin = poll?.permissions?.isPollAdmin === true
+  const canManageAuthors = poll?.permissions?.canManageAuthors === true
+  const pollAdminCandidates = pollShares.filter((share) => {
+    if (share.deleted) return false
+    if (!share.user) return false
+    if (share.user.isGuest || share.user.isNoUser) return false
+    if (share.user.isUnrestrictedOwner) return false
+    return true
+  })
 
   return (
   <main
@@ -1456,23 +1644,23 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         />
 
         <IconButton
-          onClick={openTransferOwnerDialog}
-          disabled={!poll?.permissions?.isOwner}
+          onClick={openAuthorDialog}
+          disabled={!canManageAuthors}
           title={
-            poll?.permissions?.isOwner
-              ? 'Eigentümerschaft übertragen'
-              : 'Nur der Eigentümer kann die Eigentümerschaft übertragen'
+            canManageAuthors
+              ? 'Autoren verwalten'
+              : 'Nur der Eigentümer kann Autoren verwalten'
           }
           icon={<UserCog size={20} />}
         />
 
         <IconButton
           onClick={openCalendarDialog}
-          disabled={!poll?.permissions?.isOwner}
+          disabled={!isPollAdmin}
           title={
-            poll?.permissions?.isOwner
+            isPollAdmin
               ? 'Kalendereinträge aus Umfrage erzeugen'
-              : 'Nur der Eigentümer kann Kalendereinträge erzeugen'
+              : 'Nur Eigentümer oder Co-Autoren können Kalendereinträge erzeugen'
           }
           icon={<CalendarPlus size={20} />}
         />
@@ -1487,167 +1675,449 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
       </div>
     </div>
 
-    {showTransferOwnerDialog ? (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(15, 23, 42, 0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 2000,
-        padding: '1rem',
-      }}
-      onClick={closeTransferOwnerDialog}
-    >
+    {showAuthorDialog ? (
       <div
-        onClick={(event) => event.stopPropagation()}
         style={{
-          width: '100%',
-          maxWidth: '32rem',
-          background: '#ffffff',
-          borderRadius: '1rem',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.22)',
-          padding: '1.25rem',
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(15, 23, 42, 0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '1rem',
         }}
+        onClick={closeAuthorDialog}
       >
-        <div style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-          Eigentümerschaft übertragen
-        </div>
-
         <div
-          style={{
-            fontSize: '0.92rem',
-            color: '#4b5563',
-            lineHeight: 1.45,
-            marginBottom: '0.85rem',
-          }}
-        >
-          Die Umfrage wird an einen anderen Nextcloud-Benutzer übertragen. Danach bist du
-          nicht mehr Eigentümer dieser Umfrage.
-        </div>
-
-        <input
-          type="text"
-          value={ownerSearch}
-          onChange={(e) => void handleOwnerSearch(e.target.value)}
-          placeholder="Benutzer suchen"
+          onClick={(event) => event.stopPropagation()}
           style={{
             width: '100%',
-            padding: '0.7rem 0.8rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '0.65rem',
-            font: 'inherit',
-            boxSizing: 'border-box',
-          }}
-        />
-
-        <div
-          style={{
-            marginTop: '0.65rem',
-            maxHeight: '14rem',
+            maxWidth: '36rem',
+            maxHeight: '90vh',
             overflowY: 'auto',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0.65rem',
             background: '#ffffff',
+            borderRadius: '1rem',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.22)',
+            padding: '1.25rem',
           }}
         >
-          {ownerSearchResults.length === 0 ? (
-            <div style={{ padding: '0.8rem', color: '#6b7280', fontSize: '0.9rem' }}>
-              Keine Treffer.
-            </div>
-          ) : (
-            ownerSearchResults.map((user) => {
-              const selected = selectedNewOwnerId === user.id
+          <div style={{ fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+            Autoren verwalten
+          </div>
 
-              return (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedNewOwnerId(user.id)
-                    setSelectedNewOwnerLabel(user.displayName || user.id)
-                  }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    border: 'none',
-                    borderBottom: '1px solid #f1f5f9',
-                    background: selected ? '#eff6ff' : '#ffffff',
-                    padding: '0.8rem',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ fontWeight: 600 }}>{user.displayName || user.id}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{user.id}</div>
-                </button>
-              )
-            })
-          )}
-        </div>
-
-        {selectedNewOwnerId ? (
-          <label
+          <div
             style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '0.6rem',
-              marginTop: '0.9rem',
               fontSize: '0.92rem',
-              lineHeight: 1.4,
+              color: '#4b5563',
+              lineHeight: 1.45,
+              marginBottom: '1rem',
             }}
           >
-            <input
-              type="checkbox"
-              checked={transferConfirm}
-              onChange={(e) => setTransferConfirm(e.target.checked)}
-              style={{ marginTop: '0.15rem' }}
-            />
-            <span>
-              Ich bestätige die Übertragung an <strong>{selectedNewOwnerLabel}</strong>.
-            </span>
-          </label>
-        ) : null}
-
-        {transferError ? (
-          <div style={{ marginTop: '0.75rem', color: '#b91c1c', fontSize: '0.9rem' }}>
-            {transferError}
+            Hier kannst du die Eigentümerschaft übertragen oder weiteren Bandmitgliedern
+            Co-Autor-Rechte geben. Co-Autoren können die Umfrage in PollBee verwalten.
           </div>
-        ) : null}
 
-        <div
-          style={{
-            marginTop: '1rem',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '0.5rem',
-          }}
-        >
+          {/* Eigentümerwechsel */}
+          <div
+            style={{
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.85rem',
+              padding: '1rem',
+              background: '#f8fafc',
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>
+              Eigentümerwechsel
+            </div>
 
+            <div
+              style={{
+                fontSize: '0.9rem',
+                color: '#4b5563',
+                lineHeight: 1.45,
+                marginBottom: '0.85rem',
+              }}
+            >
+              Die Umfrage wird an einen anderen Nextcloud-Benutzer übertragen. Danach bist du
+              nicht mehr Eigentümer dieser Umfrage.
+            </div>
 
-          <IconButton
-            onClick={closeTransferOwnerDialog}
-            disabled={transferLoading}
-            title="Abbrechen"
-            icon={<X size={18} />}
-            size={40}
-          />
+            <input
+              type="text"
+              value={ownerSearch}
+              onChange={(e) => void handleOwnerSearch(e.target.value)}
+              placeholder="Neuen Eigentümer suchen"
+              style={{
+                width: '100%',
+                padding: '0.7rem 0.8rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.65rem',
+                font: 'inherit',
+                boxSizing: 'border-box',
+                background: '#ffffff',
+              }}
+            />
 
+            <div
+              style={{
+                marginTop: '0.65rem',
+                maxHeight: '12rem',
+                overflowY: 'auto',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.65rem',
+                background: '#ffffff',
+              }}
+            >
+              {ownerSearchResults.length === 0 ? (
+                <div style={{ padding: '0.8rem', color: '#6b7280', fontSize: '0.9rem' }}>
+                  Keine Treffer.
+                </div>
+              ) : (
+                ownerSearchResults.map((user) => {
+                  const selected = selectedNewOwnerId === user.id
 
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedNewOwnerId(user.id)
+                        setSelectedNewOwnerLabel(user.displayName || user.id)
+                      }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        border: 'none',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: selected ? '#eff6ff' : '#ffffff',
+                        padding: '0.8rem',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{user.displayName || user.id}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>{user.id}</div>
+                    </button>
+                  )
+                })
+              )}
+            </div>
 
-          <IconButton
-            onClick={handleTransferOwnership}
-            disabled={!selectedNewOwnerId || !transferConfirm || transferLoading}
-            title="Übertragen"
-            icon={<Check size={18} />}
-            variant="primary"
-            size={40}
-          />
+            {selectedNewOwnerId ? (
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.6rem',
+                  marginTop: '0.9rem',
+                  fontSize: '0.92rem',
+                  lineHeight: 1.4,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={transferConfirm}
+                  onChange={(e) => setTransferConfirm(e.target.checked)}
+                  style={{ marginTop: '0.15rem' }}
+                />
+                <span>
+                  Ich bestätige die Übertragung an <strong>{selectedNewOwnerLabel}</strong>.
+                </span>
+              </label>
+            ) : null}
 
+            {transferError ? (
+              <div style={{ marginTop: '0.75rem', color: '#b91c1c', fontSize: '0.9rem' }}>
+                {transferError}
+              </div>
+            ) : null}
+
+            <div
+              style={{
+                marginTop: '0.85rem',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <IconButton
+                onClick={handleTransferOwnership}
+                disabled={!selectedNewOwnerId || !transferConfirm || transferLoading}
+                title="Eigentümerschaft übertragen"
+                icon={<Check size={18} />}
+                variant="primary"
+                size={40}
+              />
+            </div>
+          </div>
+
+          {/* Co-Autoren */}
+          <div
+            style={{
+              marginTop: '1rem',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.85rem',
+              padding: '1rem',
+              background: '#ffffff',
+            }}
+          >
+            <div style={{ fontWeight: 700, marginBottom: '0.35rem' }}>
+              Co-Autoren
+            </div>
+
+            <div
+              style={{
+                fontSize: '0.9rem',
+                color: '#4b5563',
+                lineHeight: 1.45,
+                marginBottom: '0.85rem',
+              }}
+            >
+              Co-Autoren erhalten zusätzliche Verwaltungsrechte für diese Umfrage.
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center',
+                marginBottom: '0.65rem',
+              }}
+            >
+              <input
+                type="text"
+                value={coAuthorSearch}
+                onChange={(e) => void handleCoAuthorSearch(e.target.value)}
+                placeholder="Co-Autor suchen"
+                style={{
+                  flex: 1,
+                  padding: '0.7rem 0.8rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.65rem',
+                  font: 'inherit',
+                  boxSizing: 'border-box',
+                }}
+              />
+
+              <IconButton
+                onClick={() => {
+                  if (coAuthorSearchResults.length === 1) {
+                    addSelectedNewPollAdmin(coAuthorSearchResults[0])
+                  }
+                }}
+                disabled={coAuthorSearchResults.length !== 1 || pollAdminLoading}
+                title="Co-Autor zur Liste hinzufügen"
+                icon={<Plus size={18} />}
+                variant="primary"
+                size={40}
+              />
+            </div>
+
+            {coAuthorSearchResults.length > 0 ? (
+              <div
+                style={{
+                  marginBottom: '0.85rem',
+                  maxHeight: '10rem',
+                  overflowY: 'auto',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.65rem',
+                  background: '#ffffff',
+                }}
+              >
+                {coAuthorSearchResults.map((user) => {
+                  const alreadySelected = selectedNewPollAdmins.some((item) => item.id === user.id)
+
+                  const alreadyAdmin = pollAdmins.some((share) => {
+                    return share.user?.id === user.id || share.user?.userId === user.id
+                  })
+
+                  return (
+                    <button
+                      key={user.id}
+                      type="button"
+                      disabled={alreadySelected || alreadyAdmin}
+                      onClick={() => addSelectedNewPollAdmin(user)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        border: 'none',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: alreadySelected || alreadyAdmin ? '#f8fafc' : '#ffffff',
+                        padding: '0.8rem',
+                        cursor: alreadySelected || alreadyAdmin ? 'default' : 'pointer',
+                        opacity: alreadySelected || alreadyAdmin ? 0.6 : 1,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>
+                        {user.displayName || user.id}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                        {alreadyAdmin
+                          ? 'Bereits Co-Autor'
+                          : alreadySelected
+                            ? 'Bereits vorgemerkt'
+                            : user.id}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : null}
+
+            <div style={{ fontWeight: 600, marginBottom: '0.45rem' }}>
+              Eingetragene Co-Autoren
+            </div>
+
+            {pollAdmins.length === 0 && selectedNewPollAdmins.length === 0 ? (
+              <div style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '0.85rem' }}>
+                Es sind noch keine Co-Autoren eingetragen.
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                  marginBottom: '0.9rem',
+                }}
+              >
+                {pollAdmins.map((share) => (
+                  <div
+                    key={share.token}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      padding: '0.65rem 0.75rem',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.65rem',
+                      background: '#f8fafc',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600 }}>
+                        {share.user?.displayName || share.user?.id || share.token}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#6b7280' }}>
+                        bereits aktiv
+                      </div>
+                    </div>
+
+                    <IconButton
+                      onClick={() => void handleRemovePollAdmin(share)}
+                      disabled={pollAdminLoading}
+                      title="Co-Autor entfernen"
+                      icon={<Trash2 size={18} />}
+                      size={36}
+                    />
+                  </div>
+                ))}
+
+                {selectedNewPollAdmins.map((user) => (
+                  <div
+                    key={user.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '0.75rem',
+                      padding: '0.65rem 0.75rem',
+                      border: '1px solid #bfdbfe',
+                      borderRadius: '0.65rem',
+                      background: '#eff6ff',
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 600 }}>
+                        {user.displayName || user.id}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#2563eb' }}>
+                        neu vorgemerkt
+                      </div>
+                    </div>
+
+                    <IconButton
+                      onClick={() => removeSelectedNewPollAdmin(user.id)}
+                      disabled={pollAdminLoading}
+                      title="Vorgemerkten Co-Autor entfernen"
+                      icon={<Trash2 size={18} />}
+                      size={36}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedNewPollAdmins.length > 0 ? (
+              <>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.6rem',
+                    marginTop: '0.9rem',
+                    fontSize: '0.92rem',
+                    lineHeight: 1.4,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={pollAdminConfirm}
+                    onChange={(e) => setPollAdminConfirm(e.target.checked)}
+                    style={{ marginTop: '0.15rem' }}
+                  />
+                  <span>
+                    Ich bestätige, dass die vorgemerkten Bandmitglieder Co-Autor-Rechte erhalten sollen.
+                  </span>
+                </label>
+
+                <div
+                  style={{
+                    marginTop: '0.85rem',
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <IconButton
+                    onClick={() => void handleGrantSelectedPollAdmins()}
+                    disabled={!pollAdminConfirm || pollAdminLoading}
+                    title="Co-Autoren speichern"
+                    icon={<Check size={18} />}
+                    variant="primary"
+                    size={40}
+                  />
+                </div>
+              </>
+            ) : null}
+
+            {pollAdminError ? (
+              <div style={{ marginTop: '0.75rem', color: '#b91c1c', fontSize: '0.9rem' }}>
+                {pollAdminError}
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            style={{
+              marginTop: '1rem',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '0.5rem',
+            }}
+          >
+            <IconButton
+              onClick={closeAuthorDialog}
+              disabled={transferLoading || pollAdminLoading}
+              title="Schließen"
+              icon={<X size={18} />}
+              size={40}
+            />
+
+         
+
+          </div>
         </div>
       </div>
-    </div>
     ) : null}
 
     {showCalendarDialog ? (

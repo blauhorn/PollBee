@@ -79,6 +79,14 @@ class CreatePollPayload(BaseModel):
     description: str = ""
     options: list[CreatePollOptionPayload]
     allowMaybe: bool = True
+    shareGroupIds: list[str] = []
+
+class CreatePollRequest(BaseModel):
+    title: str
+    description: str = ""
+    allowMaybe: bool = True
+    options: list[CreatePollOptionRequest]
+    shareGroupIds: list[str] = []
 
 def first_nonempty_str(*values):
     for value in values:
@@ -407,6 +415,51 @@ def build_calendar_summary(base_title: str, entry_status: str) -> str:
 
     title = str(base_title or "").strip() or "Umfragetermin"
     return f"{prefix} {title}"
+
+def is_current_user_poll_admin(poll_data: dict, session) -> bool:
+    owner_id = extract_owner_id(poll_data)
+    current_user_id = str(session.user_id).strip()
+
+    if owner_id and str(owner_id).strip() == current_user_id:
+        return True
+
+    raw_shares = poll_data.get("shares", []) or []
+
+    for share in raw_shares:
+        if not isinstance(share, dict) or share.get("deleted"):
+            continue
+
+        user = share.get("user") or {}
+        if not isinstance(user, dict):
+            continue
+
+        share_user_id = str(
+            user.get("userId")
+            or user.get("id")
+            or user.get("user")
+            or user.get("emailAddress")
+            or ""
+        ).strip()
+
+        if share_user_id == current_user_id and bool(user.get("isUnrestrictedOwner")):
+            return True
+
+    return False
+
+def get_poll_with_shares(client, poll_id: str) -> dict:
+    raw_poll_response = client.get_poll(poll_id)
+    poll_data = raw_poll_response.get("poll", raw_poll_response)
+
+    shares = (
+        poll_data.get("shares", [])
+        or raw_poll_response.get("shares", [])
+        or []
+    )
+
+    if shares:
+        poll_data["shares"] = shares
+
+    return poll_data
 
 @app.get("/")
 def root():
@@ -840,6 +893,66 @@ def get_poll_by_id(poll_id: str, request: Request):
 
     is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
 
+    raw_shares = (
+    poll_data.get("shares", [])
+    or raw_poll_response.get("shares", [])
+    or []
+    )
+
+    shares = []
+    is_poll_admin = is_owner
+
+    for share in raw_shares:
+        if not isinstance(share, dict):
+            continue
+
+        user = share.get("user") or {}
+        if not isinstance(user, dict):
+            user = {}
+
+        share_user_id = str(
+            user.get("userId")
+            or user.get("id")
+            or user.get("user")
+            or user.get("emailAddress")
+            or ""
+        ).strip()
+
+        is_unrestricted_owner = bool(user.get("isUnrestrictedOwner"))
+
+        if (
+            share_user_id
+            and share_user_id == str(session.user_id).strip()
+            and is_unrestricted_owner
+            and not share.get("deleted", False)
+        ):
+            is_poll_admin = True
+
+        shares.append(
+            {
+                "id": share.get("id"),
+                "token": share.get("token"),
+                "type": share.get("type"),
+                "pollId": share.get("pollId"),
+                "groupId": share.get("groupId"),
+                "label": share.get("label", ""),
+                "deleted": bool(share.get("deleted", False)),
+                "locked": bool(share.get("locked", False)),
+                "user": {
+                    "id": share_user_id,
+                    "userId": user.get("userId"),
+                    "user": user.get("user"),
+                    "displayName": user.get("displayName") or share_user_id,
+                    "emailAddress": user.get("emailAddress"),
+                    "isAdmin": bool(user.get("isAdmin", False)),
+                    "isGuest": bool(user.get("isGuest", False)),
+                    "isNoUser": bool(user.get("isNoUser", False)),
+                    "isUnrestrictedOwner": is_unrestricted_owner,
+                    "type": user.get("type"),
+                },
+            }
+        )
+
     raw_comments = (
         poll_data.get("comments", [])
         or raw_poll_response.get("comments", [])
@@ -1055,8 +1168,13 @@ def get_poll_by_id(poll_id: str, request: Request):
         },
         "permissions": {
             "isOwner": is_owner,
-            "canToggleClosed": is_owner,
+            "isPollAdmin": is_poll_admin,
+            "canToggleClosed": is_poll_admin,
+            "canManagePoll": is_poll_admin,
+            "canManageAuthors": is_owner,
         },
+        "shares": shares,
+        
     }
 
 @app.post("/polls/{poll_id}/toggle-closed")
@@ -1073,12 +1191,14 @@ def toggle_poll_closed(poll_id: str, request: Request):
     configuration = poll_data.get("configuration", {})
 
     owner_id = extract_owner_id(poll_data)
-    is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
+   
 
-    if not is_owner:
+    poll_detail = get_poll_by_id(poll_id, request)
+
+    if not poll_detail.get("permissions", {}).get("isPollAdmin", False):
         raise HTTPException(
             status_code=403,
-            detail="Nur der Eigentümer darf die Umfrage öffnen oder schließen",
+            detail="Nur Eigentümer oder Co-Autoren dürfen die Umfrage verwalten.",
         )
 
     raw_status = poll_data.get("status", {})
@@ -1453,12 +1573,14 @@ def create_poll_calendar_events(
 
     poll_data = raw_poll_response.get("poll", raw_poll_response)
     owner_id = extract_owner_id(poll_data)
-    is_owner = bool(owner_id) and owner_id == str(session.user_id).strip()
+    
 
-    if not is_owner:
+    poll_detail = get_poll_by_id(poll_id, request)
+
+    if not poll_detail.get("permissions", {}).get("isPollAdmin", False):
         raise HTTPException(
             status_code=403,
-            detail="Nur der Eigentümer darf Kalendereinträge erzeugen",
+            detail="Nur Eigentümer oder Co-Autoren dürfen Kalendereinträge erzeugen.",
         )
 
     selection_map = {
@@ -1540,6 +1662,7 @@ def create_poll(payload: CreatePollPayload, request: Request):
             description=description,
             options=options,
             allow_maybe=allow_maybe,
+            share_group_ids=payload.shareGroupIds,
         )
     except NextcloudApiError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -1551,3 +1674,59 @@ def create_poll(payload: CreatePollPayload, request: Request):
         "pollId": poll_id,
     }
 
+@app.put("/polls/shares/{share_token}/admin")
+def set_poll_share_admin(share_token: str, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
+    try:
+        return client.set_poll_share_admin(share_token)
+    except NextcloudApiError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Co-Autor konnte nicht hinzugefügt werden: {type(exc).__name__}: {exc}",
+        ) from exc
+
+@app.delete("/polls/shares/{share_token}/admin")
+def remove_poll_share_admin(share_token: str, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
+    try:
+        client.remove_poll_share_admin(share_token)
+        return client.delete_poll_share(share_token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Co-Autor konnte nicht entfernt werden: {type(exc).__name__}: {exc}",
+        ) from exc
+
+@app.post("/polls/{poll_id}/shares")
+def create_poll_share(poll_id: str, payload: dict, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
+    user_id = str(payload.get("userId") or "").strip()
+
+    if not user_id:
+        raise HTTPException(status_code=400, detail="userId fehlt.")
+
+    try:
+        return client.create_poll_share(poll_id, user_id)
+    except NextcloudApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+@app.get("/groups")
+def list_share_groups(request: Request):
+    get_current_session(request)
+
+    groups = [
+        {
+            "id": group["groupId"],
+            "displayName": group["displayName"],
+        }
+        for group in REGISTER_GROUPS
+        if group.get("groupId")
+    ]
+
+    return {"groups": groups}

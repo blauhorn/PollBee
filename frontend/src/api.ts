@@ -61,7 +61,10 @@ export type User = {
 
 export type PollPermissions = {
   isOwner: boolean
+  isPollAdmin: boolean
   canToggleClosed: boolean
+  canManagePoll: boolean
+  canManageAuthors: boolean
 }
 
 export type PollDetail = {
@@ -82,6 +85,7 @@ export type PollDetail = {
   currentVotes?: Record<string, VoteValue>
   currentUser?: User
   permissions: PollPermissions
+  shares?: PollShare[]
 }
 
 export type RegisterMember = {
@@ -175,11 +179,36 @@ export type CreatePollPayload = {
   description: string
   options: CreatePollOptionInput[]
   allowMaybe: boolean
+  shareGroupIds: string[]
 }
 
 export type CreatePollResponse = {
   ok: boolean
   pollId: string
+}
+
+export type PollShareUser = {
+  id: string
+  userId?: string
+  displayName?: string
+  emailAddress?: string
+  isUnrestrictedOwner?: boolean
+  isGuest?: boolean
+  isNoUser?: boolean
+}
+
+export type PollShare = {
+  id: number
+  token: string
+  type: string
+  pollId: number
+  user?: PollShareUser
+  deleted?: boolean
+}
+
+export type GroupOption = {
+  id: string
+  displayName: string
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/pollapp/api'
@@ -238,6 +267,15 @@ async function apiFetch(input: string, init?: RequestInit) {
   })
 
   return response
+}
+
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  try {
+    const data = await response.json()
+    return data.detail || data.message || fallback
+  } catch {
+    return fallback
+  }
 }
 
 export async function fetchHealth(): Promise<{ status: string }> {
@@ -467,20 +505,102 @@ export async function createPollCalendarEntries(
   return response.json()
 }
 
-export async function createPoll(
-  payload: CreatePollPayload,
-): Promise<CreatePollResponse> {
-  const response = await apiFetch('/polls', {
+export async function createPoll(payload: CreatePollPayload) {
+  const response = await fetch(`${API_BASE}/polls`, {
     method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(payload),
   })
 
   if (!response.ok) {
-    const text = await response.text()
-    throw new Error(text || `Create poll failed: ${response.status}`)
+    throw new Error('Umfrage konnte nicht erstellt werden.')
   }
 
   return response.json()
+}
+
+export async function setPollShareAdmin(shareToken: string): Promise<PollShare> {
+  const response = await fetch(
+    `${API_BASE}/polls/shares/${encodeURIComponent(shareToken)}/admin`,
+    {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await readErrorMessage(response, 'Co-Autor konnte nicht hinzugefügt werden.'),
+    )
+  }
+
+  const data = await response.json()
+  return data.share
+}
+
+export async function removePollShareAdmin(shareToken: string): Promise<PollShare> {
+  const response = await fetch(
+    `${API_BASE}/polls/shares/${encodeURIComponent(shareToken)}/admin`,
+    {
+      method: 'DELETE',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await readErrorMessage(response, 'Co-Autor konnte nicht entfernt werden.'),
+    )
+  }
+
+  const data = await response.json()
+  return data.share
+}
+
+export async function createPollShare(
+  pollId: string,
+  userId: string,
+): Promise<PollShare> {
+  const response = await fetch(`${API_BASE}/polls/${pollId}/shares`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      userId,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error('Benutzer konnte nicht zur Umfrage hinzugefügt werden.')
+  }
+
+  const data = await response.json()
+  return data.share
+}
+
+export async function fetchShareGroups(): Promise<GroupOption[]> {
+  const response = await fetch(`${API_BASE}/groups`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new Error('Gruppen konnten nicht geladen werden.')
+  }
+
+  const data = await response.json()
+  return data.groups ?? []
 }
 
 let cachedRequestToken: string | null = null

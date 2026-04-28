@@ -1,13 +1,15 @@
 import { useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
-import { fetchMe, fetchPolls, createPoll, type Poll, type PollOption, type CreatePollOptionInput, type User } from '../api'
+import { fetchMe, fetchPolls, createPoll, fetchShareGroups, type Poll, type PollOption, type CreatePollOptionInput, type User, type GroupOption } from '../api'
 import IconButton from '../components/IconButton'
 import { LogOut } from 'lucide-react'
+import {showSuccess, showError, showLoading} from '../utils/toast'
 
 type PollListPageProps = {
   initialFilter?: string
 }
+
 
 function formatCreatedDate(ts?: number): string {
   if (!ts) return ''
@@ -268,12 +270,20 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [newPollTitle, setNewPollTitle] = useState('')
   const [newPollDescription, setNewPollDescription] = useState('')
   const [newPollAllowMaybe, setNewPollAllowMaybe] = useState(true)
+  const [showInfoScreen, setShowInfoScreen] = useState(false)
+  const [releaseVersion, setReleaseVersion] = useState<string>('…')
+  const [releaseChangelog, setReleaseChangelog] = useState<string>('')
+  const [releaseLoading, setReleaseLoading] = useState(false)
   const [newPollOptions, setNewPollOptions] = useState<
     { id: string; date: string; time: string }[]
   >([
     { id: crypto.randomUUID(), date: '', time: '19:30' },
   ])
   const [saveMessage, setSaveMessage] = useState('')
+
+  const [availableShareGroups, setAvailableShareGroups] = useState<GroupOption[]>([])
+  const [selectedShareGroupIds, setSelectedShareGroupIds] = useState<string[]>([])
+  const [loadingGroups, setLoadingGroups] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -328,6 +338,12 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       el.removeEventListener('scroll', handleScroll)
     }
   }, [])
+
+  useEffect(() => {
+    if (showInfoScreen) {
+      fetchLatestRelease()
+    }
+  }, [showInfoScreen])
 
   const openPollCount = useMemo(() => {
     return polls.filter(isPollOpenForCurrentUser).length
@@ -405,15 +421,30 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
   const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
-  function openCreatePollDialog() {
-  setShowCreatePollDialog(true)
-  setCreatePollError('')
-  setNewPollTitle('')
-  setNewPollDescription('')
-  setNewPollAllowMaybe(true)
-  setNewPollOptions([
-    { id: crypto.randomUUID(), date: '', time: '19:30' },
-  ])
+  async function openCreatePollDialog() {
+    // Dialog öffnen + alles zurücksetzen
+    setShowCreatePollDialog(true)
+    setCreatePollError('')
+    setNewPollTitle('')
+    setNewPollDescription('')
+    setNewPollAllowMaybe(true)
+    setNewPollOptions([
+      { id: crypto.randomUUID(), date: '', time: '19:30' },
+    ])
+
+    // neue Teile
+    setSelectedShareGroupIds([])
+    setAvailableShareGroups([]) // optional: sorgt für "leeren" Zustand beim Laden
+    setLoadingGroups(true)
+    try {
+      const groups = await fetchShareGroups()
+      setAvailableShareGroups(groups)
+    } catch (error) {
+      console.error(error)
+      setCreatePollError('Gruppen konnten nicht geladen werden.')
+    } finally {
+      setLoadingGroups(false)
+      }
   }
 
   function closeCreatePollDialog() {
@@ -442,6 +473,32 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       if (prev.length <= 1) return prev
       return prev.filter((row) => row.id !== id)
     })
+  }
+
+  async function fetchLatestRelease() {
+    setReleaseLoading(true)
+
+    try {
+      const response = await fetch(
+        'https://api.github.com/repos/blauhorn/PollBee/releases/latest'
+      )
+
+      if (!response.ok) {
+        throw new Error('GitHub API Fehler')
+      }
+
+      const data = await response.json()
+
+      // tag_name ist meistens sowas wie "v1.2.3"
+      setReleaseVersion(data.tag_name || 'unbekannt')
+      setReleaseChangelog(data.body || 'Kein Changelog hinterlegt.')
+    } catch (error) {
+      console.error(error)
+      setReleaseVersion('nicht verfügbar')
+      setReleaseChangelog('Changelog konnte nicht geladen werden.')
+    } finally {
+      setReleaseLoading(false)
+    }
   }
 
   async function handleCreatePoll() {
@@ -489,18 +546,23 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         description,
         options: parsedOptions,
         allowMaybe: newPollAllowMaybe,
+        shareGroupIds: selectedShareGroupIds,
       })
 
       setShowCreatePollDialog(false)
       await fetchPolls().then(setPolls)
-      setSaveMessage?.(`Umfrage „${title}“ wurde erstellt.`)
+
+      showSuccess(`Umfrage „${title}“ wurde erstellt.`)
     } catch (error) {
       console.error(error)
-      setCreatePollError(
+
+      const message =
         error instanceof Error
           ? error.message
           : 'Umfrage konnte nicht erstellt werden.'
-      )
+
+      setCreatePollError(message)
+      showError(message)
     } finally {
       setCreatePollLoading(false)
     }
@@ -632,13 +694,18 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                     >
                       {currentUser?.displayName}
                     </div>
-
-                    <IconButton
-                        onClick={handleLogout}
-                        title="Abmelden"
-                        icon={<LogOut size={20} />}
-                      />
-
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <IconButton
+                          onClick={handleLogout}
+                          title="Abmelden"
+                          icon={<LogOut size={20} />}
+                        />
+                      <IconButton
+                          onClick={() => setShowInfoScreen(true)}
+                          title="Info"
+                          icon={<span style={{ fontWeight: 700, fontSize: '1.05rem' }}>?</span>}
+                        />
+                    </div>
 
                     
                 </div>
@@ -1229,6 +1296,57 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
               </label>
 
               <div style={{ display: 'grid', gap: '0.45rem' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+                    Teilen mit Gruppen
+                  </div>
+
+                  <div
+                    style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      padding: '0.65rem 0.75rem',
+                      display: 'grid',
+                      gap: '0.45rem',
+                      maxHeight: '10rem',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    {availableShareGroups.length === 0 ? (
+                      <div style={{ color: '#64748b', fontSize: '0.88rem' }}>
+                        Keine Gruppen verfügbar.
+                      </div>
+                    ) : (
+                      availableShareGroups.map((group) => (
+                        <label
+                          key={group.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.55rem',
+                            fontSize: '0.92rem',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedShareGroupIds.includes(group.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedShareGroupIds((current) => [...current, group.id])
+                              } else {
+                                setSelectedShareGroupIds((current) =>
+                                  current.filter((id) => id !== group.id),
+                                )
+                              }
+                            }}
+                          />
+                          <span>{group.displayName || group.id}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              <div style={{ display: 'grid', gap: '0.45rem' }}>
                 <div
                   style={{
                     display: 'flex',
@@ -1347,7 +1465,98 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
           </div>
         </div>
       ) : null}
-      
+
+
+      {showInfoScreen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: 'rgba(15, 23, 42, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setShowInfoScreen(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '420px',
+              background: '#fff',
+              borderRadius: '1rem',
+              padding: '1.25rem',
+              boxShadow: '0 20px 45px rgba(15, 23, 42, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0 }}>PollBee</h2>
+
+            <p>
+              PollBee ist eine mobile Oberfläche für die Nextcloud-Umfragen des NTSO.
+            </p>
+
+            <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
+              Version: {releaseLoading ? 'lädt…' : `Release ${releaseVersion}`}
+              <div style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '0.4rem' }}>Changelog</h3>
+
+                <div
+                  style={{
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    fontSize: '0.9rem',
+                    lineHeight: 1.45,
+                    color: '#334155',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.7rem',
+                    padding: '0.75rem',
+                  }}
+                >
+                  {releaseLoading ? 'lädt…' : releaseChangelog}
+                </div>
+              </div>
+            </p>
+
+            <a
+              href="https://github.com/blauhorn/PollBee"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: '#2563eb',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              Projekt auf GitHub öffnen
+            </a>
+
+            <div style={{ marginTop: '1.25rem', textAlign: 'right' }}>
+              <button
+                type="button"
+                onClick={() => setShowInfoScreen(false)}
+                style={{
+                  border: 0,
+                  borderRadius: '0.6rem',
+                  padding: '0.55rem 0.9rem',
+                  background: '#0f172a',
+                  color: '#fff',
+                  font: 'inherit',
+                  cursor: 'pointer',
+                }}
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}  
     </main>
   )
 }
