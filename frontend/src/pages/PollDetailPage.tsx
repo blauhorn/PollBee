@@ -552,7 +552,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     try {
       await transferPollOwnership(poll.id, selectedNewOwnerId)
 
-      setShowTransferOwnerDialog(false)
+      closeTransferOwnerDialog()
       showSuccess('Eigentümer erfolgreich übertragen')
 
       await loadPollDetail()
