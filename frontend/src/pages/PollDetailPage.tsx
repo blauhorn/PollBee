@@ -400,7 +400,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         }
       }
 
-      setSaveMessage('Deine Stimme wurde erfolgreich gespeichert.')
+      showSuccess('Deine Stimme wurde gespeichert.')
 
       const [refreshed, registerData] = await Promise.all([
         fetchPollById(pollId),
@@ -409,8 +409,6 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
       setPoll(refreshed)
       setVoteValues(refreshed.currentVotes ?? {})
-
-  
       setRegisterSummary(registerData)
     } catch (err) {
       const message =
@@ -421,7 +419,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         return
       }
 
-      setSaveMessage(`Fehler beim Speichern: ${message}`)
+      showError(`Fehler beim Speichern: ${message}`)
     } finally {
       setSaving(false)
     }
