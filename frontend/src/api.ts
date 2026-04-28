@@ -505,7 +505,7 @@ export async function createPollCalendarEntries(
   return response.json()
 }
 
-async function createPoll(payload: CreatePollPayload) {
+export async function createPoll(payload: CreatePollPayload) {
   const response = await fetch(`${API_BASE}/polls`, {
     method: 'POST',
     credentials: 'include',
