@@ -79,6 +79,7 @@ class CreatePollPayload(BaseModel):
     description: str = ""
     options: list[CreatePollOptionPayload]
     allowMaybe: bool = True
+    shareGroupIds: list[str] = []
 
 class CreatePollRequest(BaseModel):
     title: str
