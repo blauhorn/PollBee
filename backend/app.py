@@ -1724,7 +1724,7 @@ def list_share_groups(request: Request):
             "id": group_id,
             "displayName": register_name,
         }
-        for register_name, group_id in REGISTER_CONFIG.items()
+        for register_name, group_id in REGISTER_GROUPS.items()
     ]
 
     return {"groups": groups}
