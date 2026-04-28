@@ -527,7 +527,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   }
 
   function openTransferOwnerDialog() {
-    setShowTransferOwnerDialog(true)
+    setShowAuthorDialog(true)
     setOwnerSearch('')
     setOwnerSearchResults([])
     setSelectedNewOwnerId('')
@@ -538,7 +538,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
 
   function closeTransferOwnerDialog() {
     if (transferLoading) return
-    setShowTransferOwnerDialog(false)
+    setShowAuthorDialog(false)
   }
 
   async function handleTransferOwnership() {
@@ -552,7 +552,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     try {
       await transferPollOwnership(poll.id, selectedNewOwnerId)
 
-      closeTransferOwnerDialog()
+      setShowAuthorDialog(false)
       showSuccess('Eigentümer erfolgreich übertragen')
 
       await loadPollDetail()
