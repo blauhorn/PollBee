@@ -270,6 +270,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [newPollDescription, setNewPollDescription] = useState('')
   const [newPollAllowMaybe, setNewPollAllowMaybe] = useState(true)
   const [showInfoScreen, setShowInfoScreen] = useState(false)
+  const [releaseVersion, setReleaseVersion] = useState<string>('…')
+  const [releaseLoading, setReleaseLoading] = useState(false)
   const [newPollOptions, setNewPollOptions] = useState<
     { id: string; date: string; time: string }[]
   >([
@@ -330,6 +332,12 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       el.removeEventListener('scroll', handleScroll)
     }
   }, [])
+
+  useEffect(() => {
+    if (showInfoScreen) {
+      fetchLatestRelease()
+    }
+  }, [showInfoScreen])
 
   const openPollCount = useMemo(() => {
     return polls.filter(isPollOpenForCurrentUser).length
@@ -444,6 +452,30 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       if (prev.length <= 1) return prev
       return prev.filter((row) => row.id !== id)
     })
+  }
+
+  async function fetchLatestRelease() {
+    setReleaseLoading(true)
+
+    try {
+      const response = await fetch(
+        'https://api.github.com/repos/blauhorn/PollBee/releases/latest'
+      )
+
+      if (!response.ok) {
+        throw new Error('GitHub API Fehler')
+      }
+
+      const data = await response.json()
+
+      // tag_name ist meistens sowas wie "v1.2.3"
+      setReleaseVersion(data.tag_name || 'unbekannt')
+    } catch (error) {
+      console.error(error)
+      setReleaseVersion('nicht verfügbar')
+    } finally {
+      setReleaseLoading(false)
+    }
   }
 
   async function handleCreatePoll() {
@@ -1394,7 +1426,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             </p>
 
             <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
-              Version: Entwicklungsversion
+              Version: {releaseLoading ? 'lädt…' : `Release ${releaseVersion}`}
+
             </p>
 
             <a
