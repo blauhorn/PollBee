@@ -269,6 +269,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [newPollTitle, setNewPollTitle] = useState('')
   const [newPollDescription, setNewPollDescription] = useState('')
   const [newPollAllowMaybe, setNewPollAllowMaybe] = useState(true)
+  const [showInfoScreen, setShowInfoScreen] = useState(false)
   const [newPollOptions, setNewPollOptions] = useState<
     { id: string; date: string; time: string }[]
   >([
@@ -637,13 +638,18 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                     >
                       {currentUser?.displayName}
                     </div>
-
-                    <IconButton
-                        onClick={handleLogout}
-                        title="Abmelden"
-                        icon={<LogOut size={20} />}
-                      />
-
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <IconButton
+                          onClick={handleLogout}
+                          title="Abmelden"
+                          icon={<LogOut size={20} />}
+                        />
+                      <IconButton
+                          onClick={() => setShowInfoScreen(true)}
+                          title="Info"
+                          icon={<span style={{ fontWeight: 700, fontSize: '1.05rem' }}>?</span>}
+                        />
+                    </div>
 
                     
                 </div>
@@ -1352,7 +1358,78 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
           </div>
         </div>
       ) : null}
-      
+
+
+      {showInfoScreen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: 'rgba(15, 23, 42, 0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setShowInfoScreen(false)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '420px',
+              background: '#fff',
+              borderRadius: '1rem',
+              padding: '1.25rem',
+              boxShadow: '0 20px 45px rgba(15, 23, 42, 0.25)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ marginTop: 0 }}>PollBee</h2>
+
+            <p>
+              PollBee ist eine mobile Oberfläche für die Nextcloud-Umfragen des NTSO.
+            </p>
+
+            <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
+              Version: Entwicklungsversion
+            </p>
+
+            <a
+              href="https://github.com/blauhorn/PollBee"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: '#2563eb',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              Projekt auf GitHub öffnen
+            </a>
+
+            <div style={{ marginTop: '1.25rem', textAlign: 'right' }}>
+              <button
+                type="button"
+                onClick={() => setShowInfoScreen(false)}
+                style={{
+                  border: 0,
+                  borderRadius: '0.6rem',
+                  padding: '0.55rem 0.9rem',
+                  background: '#0f172a',
+                  color: '#fff',
+                  font: 'inherit',
+                  cursor: 'pointer',
+                }}
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}  
     </main>
   )
 }
