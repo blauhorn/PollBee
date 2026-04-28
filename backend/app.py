@@ -1721,10 +1721,11 @@ def list_share_groups(request: Request):
 
     groups = [
         {
-            "groupId": group_id,
-            "displayName": register_name,
+            "id": group["groupId"],
+            "displayName": group["displayName"],
         }
-        for register_name, group_id in REGISTER_GROUPS.items()
+        for group in REGISTER_GROUPS
+        if group.get("groupId")
     ]
 
     return {"groups": groups}
