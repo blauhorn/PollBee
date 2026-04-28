@@ -1714,3 +1714,17 @@ def create_poll_share(poll_id: str, payload: dict, request: Request):
         return client.create_poll_share(poll_id, user_id)
     except NextcloudApiError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+@app.get("/groups")
+def list_share_groups(request: Request):
+    get_current_session(request)
+
+    groups = [
+        {
+            "id": group_id,
+            "displayName": register_name,
+        }
+        for register_name, group_id in REGISTER_CONFIG.items()
+    ]
+
+    return {"groups": groups}
