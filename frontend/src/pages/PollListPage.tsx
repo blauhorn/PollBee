@@ -444,6 +444,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       setCreatePollError('Gruppen konnten nicht geladen werden.')
     } finally {
       setLoadingGroups(false)
+      }
   }
 
   function closeCreatePollDialog() {
