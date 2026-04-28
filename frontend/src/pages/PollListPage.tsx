@@ -4,7 +4,7 @@ import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, type Poll, type PollOption, type CreatePollOptionInput, type User } from '../api'
 import IconButton from '../components/IconButton'
 import { LogOut } from 'lucide-react'
-import {showSuccess, showError, showLoading} from '../utils/toast'
+import {showSuccess, showError, showLoading} from '../../utils/toast'
 
 type PollListPageProps = {
   initialFilter?: string
