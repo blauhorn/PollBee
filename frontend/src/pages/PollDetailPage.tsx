@@ -481,9 +481,10 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     try {
       const result = await togglePollClosed(poll.id)
       setPoll(result.poll)
+      showSuccess('Umfragestatus wurde geändert')
     } catch (err) {
       console.error(err)
-      alert('Der Status der Umfrage konnte nicht geändert werden.')
+      showError('Der Status der Umfrage konnte nicht geändert werden.')
     } finally {
       setToggleBusy(false)
     }
@@ -552,9 +553,10 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
       const result = await transferPollOwnership(poll.id, selectedNewOwnerId)
       setPoll(result.poll)
       setShowTransferOwnerDialog(false)
+      showSuccess('Eigentümer erfolgreich übertragen')
     } catch (error) {
       console.error(error)
-      setTransferError('Eigentümerschaft konnte nicht übertragen werden.')
+      showError('Eigentümerschaft konnte nicht übertragen werden.')
     } finally {
       setTransferLoading(false)
     }
@@ -625,7 +627,9 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
       }))
 
     if (optionSelections.length === 0) {
-      setCalendarError('Bitte mindestens eine Option auswählen.')
+      const message = 'Bitte mindestens eine Option auswählen.'
+      setCalendarError(message)
+      showError(message)
       setCalendarSaving(false)
       return
     }
@@ -643,20 +647,22 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         pollAppUrl,
       })
 
-      setCalendarSuccess(`${result.createdCount} Kalendereinträge erzeugt.`)
+      showSuccess(`${result.createdCount} Kalendereinträge erzeugt.`)
       setShowCalendarDialog(false)
     } catch (error) {
       console.error(error)
-      setCalendarError(
+
+      const message =
         error instanceof Error
           ? error.message
           : 'Kalendereinträge konnten nicht erzeugt werden.'
-      )
+
+      setCalendarError(message)
+      showError(message)
     } finally {
       setCalendarSaving(false)
     }
   }
-
   async function handleMakePollAdmin(share: PollShare) {
     setPollAdminError('')
     setPollAdminLoading(true)
@@ -673,56 +679,46 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     }
   }
 
-  async function handleRemovePollAdmin(share: PollShare) {
-    setPollAdminError('')
-    setPollAdminLoading(true)
-
-    try {
-      await removePollShareAdmin(share.token)
-      await loadPollDetail()
-    } catch (error) {
-      setPollAdminError(
-        error instanceof Error ? error.message : 'Co-Autor konnte nicht entfernt werden.',
-      )
-    } finally {
-      setPollAdminLoading(false)
-    }
-  }
-
   async function handleGrantSelectedPollAdmins() {
-    setPollAdminError('')
-    setPollAdminLoading(true)
+  setPollAdminError('')
+  setPollAdminLoading(true)
 
-    try {
-      for (const user of selectedNewPollAdmins) {
-        let share = pollShares.find((item) => {
-          return item.user?.id === user.id || item.user?.userId === user.id
-        })
+  try {
+    for (const user of selectedNewPollAdmins) {
+      let share = pollShares.find((item) => {
+        return item.user?.id === user.id || item.user?.userId === user.id
+      })
 
-        if (!share) {
-          share = await createPollShare(poll!.id, user.id)
-        }
-
-        if (!share.token) {
-          throw new Error(`Kein Share-Token für ${user.displayName || user.id} erhalten.`)
-        }
-
-        await setPollShareAdmin(share.token)
+      if (!share) {
+        share = await createPollShare(poll!.id, user.id)
       }
 
-      setSelectedNewPollAdmins([])
-      setPollAdminConfirm(false)
-      await loadPollDetail()
-    } catch (error) {
-      setPollAdminError(
-        error instanceof Error
-          ? error.message
-          : 'Co-Autoren konnten nicht hinzugefügt werden.',
-      )
-    } finally {
-      setPollAdminLoading(false)
+      if (!share.token) {
+        throw new Error(
+          `Kein Share-Token für ${user.displayName || user.id} erhalten.`,
+        )
+      }
+
+      await setPollShareAdmin(share.token)
     }
+
+    setSelectedNewPollAdmins([])
+    setPollAdminConfirm(false)
+    await loadPollDetail()
+
+    showSuccess('Co-Autor(en) hinzugefügt')
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Co-Autoren konnten nicht hinzugefügt werden.'
+
+    setPollAdminError(message)
+    showError(message)
+  } finally {
+    setPollAdminLoading(false)
   }
+}
 
   async function handleRemovePollAdmin(share: PollShare) {
     setPollAdminError('')
@@ -731,12 +727,16 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     try {
       await removePollShareAdmin(share.token)
       await loadPollDetail()
+
+      showSuccess('Co-Autor entfernt')
     } catch (error) {
-      setPollAdminError(
+      const message =
         error instanceof Error
           ? error.message
-          : 'Co-Autor konnte nicht entfernt werden.',
-      )
+          : 'Co-Autor konnte nicht entfernt werden.'
+
+      setPollAdminError(message)
+      showError(message)
     } finally {
       setPollAdminLoading(false)
     }
