@@ -550,13 +550,22 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     setTransferError('')
 
     try {
-      const result = await transferPollOwnership(poll.id, selectedNewOwnerId)
-      setPoll(result.poll)
+      await transferPollOwnership(poll.id, selectedNewOwnerId)
+
       setShowTransferOwnerDialog(false)
       showSuccess('Eigentümer erfolgreich übertragen')
+
+      await loadPollDetail()
     } catch (error) {
       console.error(error)
-      showError('Eigentümerschaft konnte nicht übertragen werden.')
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Eigentümerschaft konnte nicht übertragen werden.'
+
+      setTransferError(message)
+      showError(message)
     } finally {
       setTransferLoading(false)
     }
@@ -680,45 +689,45 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   }
 
   async function handleGrantSelectedPollAdmins() {
-  setPollAdminError('')
-  setPollAdminLoading(true)
+    setPollAdminError('')
+    setPollAdminLoading(true)
 
-  try {
-    for (const user of selectedNewPollAdmins) {
-      let share = pollShares.find((item) => {
-        return item.user?.id === user.id || item.user?.userId === user.id
-      })
+    try {
+      for (const user of selectedNewPollAdmins) {
+        let share = pollShares.find((item) => {
+          return item.user?.id === user.id || item.user?.userId === user.id
+        })
 
-      if (!share) {
-        share = await createPollShare(poll!.id, user.id)
+        if (!share) {
+          share = await createPollShare(poll!.id, user.id)
+        }
+
+        if (!share.token) {
+          throw new Error(
+            `Kein Share-Token für ${user.displayName || user.id} erhalten.`,
+          )
+        }
+
+        await setPollShareAdmin(share.token)
       }
 
-      if (!share.token) {
-        throw new Error(
-          `Kein Share-Token für ${user.displayName || user.id} erhalten.`,
-        )
-      }
+      setSelectedNewPollAdmins([])
+      setPollAdminConfirm(false)
+      await loadPollDetail()
 
-      await setPollShareAdmin(share.token)
+      showSuccess('Co-Autor(en) hinzugefügt')
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Co-Autoren konnten nicht hinzugefügt werden.'
+
+      setPollAdminError(message)
+      showError(message)
+    } finally {
+      setPollAdminLoading(false)
     }
-
-    setSelectedNewPollAdmins([])
-    setPollAdminConfirm(false)
-    await loadPollDetail()
-
-    showSuccess('Co-Autor(en) hinzugefügt')
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Co-Autoren konnten nicht hinzugefügt werden.'
-
-    setPollAdminError(message)
-    showError(message)
-  } finally {
-    setPollAdminLoading(false)
   }
-}
 
   async function handleRemovePollAdmin(share: PollShare) {
     setPollAdminError('')
