@@ -494,15 +494,18 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
       setShowCreatePollDialog(false)
       await fetchPolls().then(setPolls)
-      setSaveMessage?.(`Umfrage „${title}“ wurde erstellt.`)
-      showSuccess('Umfrage erfolgreich erstellt')
+
+      showSuccess(`Umfrage „${title}“ wurde erstellt.`)
     } catch (error) {
       console.error(error)
-      setCreatePollError(
+
+      const message =
         error instanceof Error
           ? error.message
           : 'Umfrage konnte nicht erstellt werden.'
-      )
+
+      setCreatePollError(message)
+      showError(message)
     } finally {
       setCreatePollLoading(false)
     }
