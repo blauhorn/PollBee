@@ -7,6 +7,7 @@ import PollResolverPage from './pages/PollResolverPage'
 import LoginPage from './pages/LoginPage'
 import { fetchMe, logout, type User } from './api'
 import PollDebugPage from './pages/PollDebugPage'
+import { Toaster } from 'react-hot-toast'
 
 export default function App() {
   const navigate = useNavigate()
@@ -38,33 +39,46 @@ export default function App() {
     return <p style={{ padding: '1rem' }}>Prüfe Anmeldung...</p>
   }
 
-  return (
-    <Routes>
-      <Route
-        path="/"
-        element={<Layout currentUser={currentUser} onLogout={handleLogout} />}
-      >
+    return (
+    <>
+      <Routes>
         <Route
-          index
-          element={
-            currentUser ? (
-              <Navigate to="/polls" replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
+          path="/"
+          element={<Layout currentUser={currentUser} onLogout={handleLogout} />}
+        >
+          <Route
+            index
+            element={
+              currentUser ? (
+                <Navigate to="/polls" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
 
-        <Route path="login" element={<LoginPage />} />
+          <Route path="login" element={<LoginPage />} />
 
-        <Route path="polls" element={<PollListPage />} />
-        <Route path="polls/:pollId" element={<PollResolverPage />} />
-        <Route path="polls/:pollId/debug" element={<PollDebugPage />} />
+          <Route path="polls" element={<PollListPage />} />
+          <Route path="polls/:pollId" element={<PollResolverPage />} />
+          <Route path="polls/:pollId/debug" element={<PollDebugPage />} />
 
-        <Route path=":filterText" element={<PollListPage />} />
+          <Route path=":filterText" element={<PollListPage />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#1f2937',
+            color: '#fff',
+          },
+        }}
+      />
+    </>
   )
 }

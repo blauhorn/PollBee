@@ -4,6 +4,7 @@ import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, type Poll, type PollOption, type CreatePollOptionInput, type User } from '../api'
 import IconButton from '../components/IconButton'
 import { LogOut } from 'lucide-react'
+import {showSuccess, showError, showLoading} from '../utils/toast'
 
 type PollListPageProps = {
   initialFilter?: string
@@ -494,6 +495,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       setShowCreatePollDialog(false)
       await fetchPolls().then(setPolls)
       setSaveMessage?.(`Umfrage „${title}“ wurde erstellt.`)
+      showSuccess('Umfrage erfolgreich erstellt')
     } catch (error) {
       console.error(error)
       setCreatePollError(
