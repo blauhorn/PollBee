@@ -271,6 +271,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [newPollAllowMaybe, setNewPollAllowMaybe] = useState(true)
   const [showInfoScreen, setShowInfoScreen] = useState(false)
   const [releaseVersion, setReleaseVersion] = useState<string>('…')
+  const [releaseChangelog, setReleaseChangelog] = useState<string>('')
   const [releaseLoading, setReleaseLoading] = useState(false)
   const [newPollOptions, setNewPollOptions] = useState<
     { id: string; date: string; time: string }[]
@@ -470,9 +471,11 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
       // tag_name ist meistens sowas wie "v1.2.3"
       setReleaseVersion(data.tag_name || 'unbekannt')
+      setReleaseChangelog(data.body || 'Kein Changelog hinterlegt.')
     } catch (error) {
       console.error(error)
       setReleaseVersion('nicht verfügbar')
+      setReleaseChangelog('Changelog konnte nicht geladen werden.')
     } finally {
       setReleaseLoading(false)
     }
@@ -1427,7 +1430,26 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
             <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
               Version: {releaseLoading ? 'lädt…' : `Release ${releaseVersion}`}
+              <div style={{ marginTop: '1rem' }}>
+                <h3 style={{ marginBottom: '0.4rem' }}>Changelog</h3>
 
+                <div
+                  style={{
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    whiteSpace: 'pre-wrap',
+                    fontSize: '0.9rem',
+                    lineHeight: 1.45,
+                    color: '#334155',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '0.7rem',
+                    padding: '0.75rem',
+                  }}
+                >
+                  {releaseLoading ? 'lädt…' : releaseChangelog}
+                </div>
+              </div>
             </p>
 
             <a
