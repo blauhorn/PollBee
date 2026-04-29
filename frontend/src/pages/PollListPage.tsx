@@ -709,9 +709,19 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         const pollData = await fetchPolls()
         setPolls(pollData)
 
-        pollData.forEach((poll) => {
-          void loadSummary(poll)
-        })
+        const MAX_PARALLEL_SUMMARIES = 3
+
+        async function loadSummariesInBatches(pollsToLoad: Poll[]) {
+          for (let i = 0; i < pollsToLoad.length; i += MAX_PARALLEL_SUMMARIES) {
+            const batch = pollsToLoad.slice(i, i + MAX_PARALLEL_SUMMARIES)
+
+            await Promise.all(
+              batch.map((poll) => loadSummary(poll)),
+            )
+          }
+        }
+
+        void loadSummariesInBatches(pollData)
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Unbekannter Fehler'
