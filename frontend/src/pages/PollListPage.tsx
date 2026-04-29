@@ -1054,10 +1054,10 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             gap: '0.5rem',
           }}
         >
-  {renderedPolls.map((poll) => {
-      const summary = pollSummaries[poll.id]
-      const isSummaryLoading = loadingSummaries[poll.id]
-      const isReady = Boolean(summary)
+          {renderedPolls.map((poll) => {
+              const summary = pollSummaries[poll.id]
+              const isSummaryLoading = loadingSummaries[poll.id]
+              const isReady = Boolean(summary)
 
           return (
             <article
@@ -1072,21 +1072,21 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                 transition: 'background 0.2s ease, border 0.2s ease',
               }}
             >
-            {/* 🔶 Offen-Badge */}
-              {!poll._ui.closed && poll._ui.needsResponse ? (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '0.6rem',
-                    right: '0.6rem',
-                    width: '0.6rem',
-                    height: '0.6rem',
-                    borderRadius: '999px',
-                    background: '#f59e0b',
-                    boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(245,158,11,0.2)',
-                  }}
-                />
-              ) : null}
+              {/* 🔶 Offen-Badge */}
+                {!poll._ui.closed && poll._ui.needsResponse ? (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '0.6rem',
+                      right: '0.6rem',
+                      width: '0.6rem',
+                      height: '0.6rem',
+                      borderRadius: '999px',
+                      background: '#f59e0b',
+                      boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(245,158,11,0.2)',
+                    }}
+                  />
+                ) : null}
 
               {/* 🔒 Geschlossen-Badge */}
                 {poll._ui.closed && poll._ui.futureOptions ? (
@@ -1219,7 +1219,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                         </tr>
                       </thead>
 
-                     <tbody>
+                      <tbody>
                           {isSummaryLoading && !isReady ? (
                             <tr>
                               <td
@@ -1277,8 +1277,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                   </div>
                 </Link>
             </article>
-           )
-          ))}
+             )
+        })}
         </div>
 
         <div
