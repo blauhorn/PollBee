@@ -461,6 +461,48 @@ def get_poll_with_shares(client, poll_id: str) -> dict:
 
     return poll_data
 
+
+def build_light_poll_list_item(
+    raw_poll: dict,
+    detail_poll_data: dict | None = None,
+    is_closed: bool = False,
+    derived_status: str = "open",
+    due_date: str = "",
+) -> dict:
+    configuration = raw_poll.get("configuration", {}) or {}
+    detail_configuration = (detail_poll_data or {}).get("configuration", {}) or {}
+
+    effective_configuration = {
+        **configuration,
+        **detail_configuration,
+    }
+
+    owner = (detail_poll_data or raw_poll).get("owner") or {}
+    created = (
+        (detail_poll_data or raw_poll).get("status", {}).get("created")
+        if isinstance((detail_poll_data or raw_poll).get("status"), dict)
+        else None
+    ) or (detail_poll_data or raw_poll).get("created")
+
+    return {
+        "id": str(raw_poll.get("id")),
+        "title": effective_configuration.get("title")
+        or (detail_poll_data or {}).get("title")
+        or raw_poll.get("title")
+        or "Ohne Titel",
+        "description": effective_configuration.get("description")
+        or (detail_poll_data or {}).get("description")
+        or raw_poll.get("description")
+        or "",
+        "status": derived_status,
+        "isClosed": is_closed,
+        "dueDate": str(due_date) if due_date else "",
+        "summaryText": "",
+        "options": [],
+        "owner": owner.get("displayName") or owner.get("userId") or "",
+        "created": created,
+    }
+
 @app.get("/")
 def root():
     return {"message": "PollApp backend läuft"}
@@ -818,26 +860,17 @@ def get_polls(request: Request):
             print("DERIVED STATUS:", derived_status)
             print("===========================\n")
 
-        try:
-            raw_options = client.get_poll_options(poll_id)
-            raw_votes = client.get_poll_votes(poll_id)
-
-            source_poll = detail_poll_data or raw_poll
-
-            poll_item = build_poll_list_item(
-                raw_poll=source_poll,
-                raw_options=raw_options,
-                raw_votes=raw_votes,
-                registered_members_normalized=registered_members_normalized,
+            poll_list.append(
+                build_light_poll_list_item(
+                    raw_poll=raw_poll,
+                    detail_poll_data=detail_poll_data,
+                    is_closed=is_closed,
+                    derived_status=derived_status,
+                    due_date=str(effective_due_date) if effective_due_date else "",
+                )
             )
 
-            poll_item["status"] = derived_status
-            poll_item["isClosed"] = is_closed
-            poll_item["dueDate"] = str(effective_due_date) if effective_due_date else ""
 
-            poll_list.append(poll_item)
-
-        except NextcloudApiError as exc:
             print(f"DEBUG /polls data failed for poll {poll_id}: {exc}")
 
             poll_list.append(
@@ -860,6 +893,39 @@ def get_polls(request: Request):
             )
 
     return poll_list
+
+@app.get("/polls/{poll_id}/summary")
+def get_poll_summary(poll_id: str, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+    provisioning_client = build_provisioning_client()
+
+    try:
+        registered_members_normalized, _ = get_all_register_members(provisioning_client)
+    except ProvisioningApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    try:
+        raw_options = client.get_poll_options(poll_id)
+        raw_votes = client.get_poll_votes(poll_id)
+    except NextcloudApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    option_answer_counts = get_registered_option_answer_counts(
+        raw_votes=raw_votes,
+        registered_members_normalized=registered_members_normalized,
+    )
+
+    options = build_poll_option_list(
+        raw_options=raw_options,
+        option_answer_counts=option_answer_counts,
+        total_registered_members=len(registered_members_normalized),
+    )
+
+    return {
+        "pollId": poll_id,
+        "options": options,
+    }
 
 @app.get("/polls/{poll_id}")
 def get_poll_by_id(poll_id: str, request: Request):

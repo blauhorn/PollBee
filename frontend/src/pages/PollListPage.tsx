@@ -669,21 +669,29 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
 
   async function loadSummary(poll: Poll) {
-     setLoadingSummaries((prev) => ({ ...prev, [poll.id]: true }))
+    setLoadingSummaries((prev) => ({ ...prev, [poll.id]: true }))
 
-     try {
-       const summary = buildPollSummary(poll)
-        setPollSummaries((prev) => ({
-         ...prev,
-         [poll.id]: summary,
-       }))
-     } catch (err) {
-       console.error('Summary konnte nicht gebaut werden', poll.id, err)
-     } finally {
-       setLoadingSummaries((prev) => ({ ...prev, [poll.id]: false }))
-     }
-   }
+    try {
+      const response = await fetch(`${API_BASE}/polls/${poll.id}/summary`, {
+        credentials: 'include',
+      })
 
+      if (!response.ok) {
+        throw new Error(`Summary konnte nicht geladen werden: ${response.status}`)
+      }
+
+      const summary = await response.json()
+
+      setPollSummaries((prev) => ({
+        ...prev,
+        [poll.id]: summary,
+      }))
+    } catch (err) {
+      console.error('Summary konnte nicht geladen werden', poll.id, err)
+    } finally {
+      setLoadingSummaries((prev) => ({ ...prev, [poll.id]: false }))
+    }
+  }
 
 
   useEffect(() => {
