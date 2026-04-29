@@ -800,20 +800,22 @@ def login_flow_status(state_id: str, response: Response):
 def get_polls(request: Request):
     session = get_current_session(request)
     client = build_client_from_session(session)
- 
+
     try:
         raw_polls = client.get_polls()
     except NextcloudApiError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-   
     poll_list = []
 
     for raw_poll in raw_polls:
         poll_id = str(raw_poll.get("id"))
         configuration = raw_poll.get("configuration", {}) or {}
-        print(f"DEBUG POLL LIST ITEM: id={poll_id} title={configuration.get('title') or raw_poll.get('title')}")
-       
+
+        print(
+            f"DEBUG POLL LIST ITEM: id={poll_id} "
+            f"title={configuration.get('title') or raw_poll.get('title')}"
+        )
 
         detail_poll_data = None
         detail_configuration = {}
@@ -843,7 +845,6 @@ def get_polls(request: Request):
             or ""
         )
 
-        # Optional: gezielt nur Probenlager debuggen
         if (
             effective_configuration.get("title") == "Probenlager"
             or raw_poll.get("configuration", {}).get("title") == "Probenlager"
@@ -855,37 +856,15 @@ def get_polls(request: Request):
             print("DERIVED STATUS:", derived_status)
             print("===========================\n")
 
-            poll_list.append(
-                build_light_poll_list_item(
-                    raw_poll=raw_poll,
-                    detail_poll_data=detail_poll_data,
-                    is_closed=is_closed,
-                    derived_status=derived_status,
-                    due_date=str(effective_due_date) if effective_due_date else "",
-                )
+        poll_list.append(
+            build_light_poll_list_item(
+                raw_poll=raw_poll,
+                detail_poll_data=detail_poll_data,
+                is_closed=is_closed,
+                derived_status=derived_status,
+                due_date=str(effective_due_date) if effective_due_date else "",
             )
-
-
-            print(f"DEBUG /polls data failed for poll {poll_id}: {exc}")
-
-            poll_list.append(
-                {
-                    "id": poll_id,
-                    "title": effective_configuration.get("title")
-                    or (detail_poll_data or {}).get("title")
-                    or raw_poll.get("title")
-                    or "Ohne Titel",
-                    "description": effective_configuration.get("description")
-                    or (detail_poll_data or {}).get("description")
-                    or raw_poll.get("description")
-                    or "",
-                    "status": derived_status,
-                    "isClosed": is_closed,
-                    "dueDate": str(effective_due_date) if effective_due_date else "",
-                    "summaryText": "",
-                    "options": [],
-                }
-            )
+        )
 
     return poll_list
 
