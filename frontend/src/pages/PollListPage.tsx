@@ -637,6 +637,9 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [selectedShareGroupIds, setSelectedShareGroupIds] = useState<string[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
 
+  const [pollSummaries, setPollSummaries] = useState<Record<string, PollSummary>>({})
+  const [loadingSummaries, setLoadingSummaries] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
     async function loadCurrentUser() {
       try {
@@ -655,10 +658,27 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       }
     }
 
+    async function loadSummary(pollId: string) {
+      setLoadingSummaries((prev) => ({ ...prev, [pollId]: true }))
+
+      try {
+        const summary = await fetchPollSummary(pollId)
+        setPollSummaries((prev) => ({ ...prev, [pollId]: summary }))
+      } catch (e) {
+        console.error('Summary failed', pollId, e)
+      } finally {
+        setLoadingSummaries((prev) => ({ ...prev, [pollId]: false }))
+      }
+    }
+
     async function loadPolls() {
       try {
         const pollData = await fetchPolls()
         setPolls(pollData)
+
+        pollData.forEach((poll) => {
+          void loadSummary(poll.id)
+        })
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Unbekannter Fehler'
@@ -754,6 +774,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
   const renderedPolls = useMemo(() => {
     return filteredPolls.map((poll) => {
+      const summary = pollSummaries[poll.id]
+      const isLoading = loadingSummaries[poll.id]
       const style = getPollStyle(poll)
       const closed = isPollClosed(poll)
       const needsResponse = needsCurrentUserResponse(poll)
@@ -1032,206 +1054,230 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             gap: '0.5rem',
           }}
         >
-          {renderedPolls.map((poll) => (
-	<article
-	  key={poll.id}
-	  style={{
-	    position: 'relative',
-	    border: `1px solid ${poll._ui.style.border}`,
-	    borderRadius: '0.8rem',
-	    padding: '0.5rem',
-	    background: poll._ui.style.background,
-	    color: poll._ui.style.color,
-	    transition: 'background 0.2s ease, border 0.2s ease',
-	  }}
-	>
-	{/* 🔶 Offen-Badge */}
-	  {!poll._ui.closed && poll._ui.needsResponse ? (
-		  <div
-		    style={{
-		      position: 'absolute',
-		      top: '0.6rem',
-		      right: '0.6rem',
-		      width: '0.6rem',
-		      height: '0.6rem',
-		      borderRadius: '999px',
-		      background: '#f59e0b',
-		      boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(245,158,11,0.2)',
-		    }}
-		  />
-		) : null}
+  {renderedPolls.map((poll) => {
+      const summary = pollSummaries[poll.id]
+      const isSummaryLoading = loadingSummaries[poll.id]
+      const isReady = Boolean(summary)
 
-	  {/* 🔒 Geschlossen-Badge */}
-			{poll._ui.closed && poll._ui.futureOptions ? (
-			  <div
-			    style={{
-			      position: 'absolute',
-			      top: '0.6rem',
-			      right: '0.6rem',
-			      background: '#e5e7eb',
-			      color: '#374151',
-			      fontSize: '0.72rem',
-			      fontWeight: 600,
-			      lineHeight: 1,
-			      padding: '0.35rem 0.55rem',
-			      borderRadius: '999px',
-			      boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-			      display: 'flex',
-			      alignItems: 'center',
-			      gap: '0.25rem',
-			    }}
-			  >
-			    <span>🔒{poll._ui.closedDate}</span>
-			   
-			  </div>
-			) : null}
-              <Link
-                to={`/polls/${poll.id}`}
-                style={{
-                  display: 'block',
-                  color: 'inherit',
-                  textDecoration: 'none',
-                }}
-              >
-                <div style={{ marginBottom: '0.45rem' }}>
+          return (
+            <article
+              key={poll.id}
+              style={{
+                position: 'relative',
+                border: `1px solid ${poll._ui.style.border}`,
+                borderRadius: '0.8rem',
+                padding: '0.5rem',
+                background: poll._ui.style.background,
+                color: poll._ui.style.color,
+                transition: 'background 0.2s ease, border 0.2s ease',
+              }}
+            >
+            {/* 🔶 Offen-Badge */}
+              {!poll._ui.closed && poll._ui.needsResponse ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '0.6rem',
+                    right: '0.6rem',
+                    width: '0.6rem',
+                    height: '0.6rem',
+                    borderRadius: '999px',
+                    background: '#f59e0b',
+                    boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(245,158,11,0.2)',
+                  }}
+                />
+              ) : null}
+
+              {/* 🔒 Geschlossen-Badge */}
+                {poll._ui.closed && poll._ui.futureOptions ? (
                   <div
                     style={{
-                      fontSize: '1.15rem',
-                      fontWeight: 700,
-                      lineHeight: 1.3,
-                      marginBottom: '0.35rem',
+                      position: 'absolute',
+                      top: '0.6rem',
+                      right: '0.6rem',
+                      background: '#e5e7eb',
+                      color: '#374151',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      lineHeight: 1,
+                      padding: '0.35rem 0.55rem',
+                      borderRadius: '999px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
                     }}
                   >
-                    {poll.title}
+                    <span>🔒{poll._ui.closedDate}</span>
+                  
                   </div>
-                  <div
-			  style={{
-			    fontSize: '0.78rem',
-			    color: '#6b7280',
-			    fontStyle: 'italic',
-			    marginTop: '0.15rem',
-			    marginBottom: '0.2rem',
-			  }}
-			>
-			  {poll.owner ? `von ${poll.owner}` : ''}
-			  {poll.created ? ` · ${poll._ui.createdDate}` : ''}
-       
-		  </div>
+                ) : null}
+                <Link
+                  to={isReady ? `/polls/${poll.id}` : '#'}
+                  onClick={(event) => {
+                    if (!isReady) {
+                      event.preventDefault()
+                    }
+                  }}
+                  style={{
+                    display: 'block',
+                    color: 'inherit',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <div style={{ marginBottom: '0.45rem' }}>
+                    <div
+                      style={{
+                        fontSize: '1.15rem',
+                        fontWeight: 700,
+                        lineHeight: 1.3,
+                        marginBottom: '0.35rem',
+                      }}
+                    >
+                      {poll.title}
+                    </div>
+                    <div
+          style={{
+            fontSize: '0.78rem',
+            color: '#6b7280',
+            fontStyle: 'italic',
+            marginTop: '0.15rem',
+            marginBottom: '0.2rem',
+          }}
+        >
+          {poll.owner ? `von ${poll.owner}` : ''}
+          {poll.created ? ` · ${poll._ui.createdDate}` : ''}
+        
+        </div>
 
-                  <div
-                    style={{
-                      fontSize: '0.92rem',
-                      color: '#4b5563',
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {poll.description}
+                    <div
+                      style={{
+                        fontSize: '0.92rem',
+                        color: '#4b5563',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {poll.description}
+                    </div>
                   </div>
-                </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table
-                    style={{
-                      width: '100%',
-                      borderCollapse: 'collapse',
-                      fontSize: '0.95rem',
-                    }}
-                  >
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                        <th
-                          style={{
-                            textAlign: 'left',
-                            padding: '0.55rem 0.4rem 0.55rem 0',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Datum
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="✅" label="Ja" />
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="❌" label="Nein" />
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="❔" label="Vielleicht" />
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="⏳" label="Fehlt" />
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {poll.options.length > 0 ? (
-                        poll._ui.options.map((option) => (
-                          <tr
-                            key={option.id}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: '0.95rem',
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <th
                             style={{
-                              borderBottom: '1px solid #f0f2f5',
+                              textAlign: 'left',
+                              padding: '0.55rem 0.4rem 0.55rem 0',
+                              fontWeight: 600,
                             }}
                           >
-                            <td style={{ padding: '0.55rem 0.4rem 0.55rem 0' }}>
-                              {option.formattedDate}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.yesCount}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.noCount}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.maybeCount}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.missingCount}
+                            Datum
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="✅" label="Ja" />
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="❌" label="Nein" />
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="❔" label="Vielleicht" />
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="⏳" label="Fehlt" />
+                          </th>
+                        </tr>
+                      </thead>
+
+                     <tbody>
+                          {isSummaryLoading && !isReady ? (
+                            <tr>
+                              <td
+                                colSpan={5}
+                                style={{
+                                  padding: '0.75rem 0',
+                                  color: '#6b7280',
+                                  fontStyle: 'italic',
+                                }}
+                              >
+                                Lade Zusammenfassung...
+                              </td>
+                            </tr>
+                          ) : poll.options.length > 0 ? (
+                            poll._ui.options.map((option) => (
+                            <tr
+                              key={option.id}
+                              style={{
+                                borderBottom: '1px solid #f0f2f5',
+                              }}
+                            >
+                              <td style={{ padding: '0.55rem 0.4rem 0.55rem 0' }}>
+                                {option.formattedDate}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.yesCount}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.noCount}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.maybeCount}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.missingCount}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td
+                              colSpan={5}
+                              style={{
+                                padding: '0.75rem 0',
+                                color: '#6b7280',
+                                fontStyle: 'italic',
+                              }}
+                            >
+                              Keine Optionen vorhanden.
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            style={{
-                              padding: '0.75rem 0',
-                              color: '#6b7280',
-                              fontStyle: 'italic',
-                            }}
-                          >
-                            Keine Optionen vorhanden.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </Link>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Link>
             </article>
+           )
           ))}
         </div>
 
