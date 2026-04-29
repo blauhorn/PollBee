@@ -1057,7 +1057,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
           {renderedPolls.map((poll) => {
               const summary = pollSummaries[poll.id]
               const isSummaryLoading = loadingSummaries[poll.id]
-              const isReady = Boolean(summary)
+              
+              const isReady = Boolean(summary) || poll.options.length > 0
 
           return (
             <article
@@ -1112,7 +1113,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                   
                   </div>
                 ) : null}
-                <Link
+               <Link
                   to={isReady ? `/polls/${poll.id}` : '#'}
                   onClick={(event) => {
                     if (!isReady) {
@@ -1123,8 +1124,9 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                     display: 'block',
                     color: 'inherit',
                     textDecoration: 'none',
+                    opacity: isReady ? 1 : 0.75,
                   }}
-                >
+>
                   <div style={{ marginBottom: '0.45rem' }}>
                     <div
                       style={{
