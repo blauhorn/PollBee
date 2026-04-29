@@ -638,10 +638,26 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [loadingGroups, setLoadingGroups] = useState(false)
 
   useEffect(() => {
-    async function load() {
+    async function loadCurrentUser() {
       try {
-        const [userData, pollData] = await Promise.all([fetchMe(), fetchPolls()])
+        const userData = await fetchMe()
         setCurrentUser(userData)
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Unbekannter Fehler'
+
+        if (message.includes('401')) {
+          navigate('/login')
+          return
+        }
+
+        setError(message)
+      }
+    }
+
+    async function loadPolls() {
+      try {
+        const pollData = await fetchPolls()
         setPolls(pollData)
       } catch (err) {
         const message =
@@ -658,7 +674,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       }
     }
 
-    void load()
+    void loadCurrentUser()
+    void loadPolls()
   }, [navigate])
 
   const listScrollRef = useRef<HTMLElement | null>(null)
