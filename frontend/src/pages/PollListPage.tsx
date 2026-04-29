@@ -9,6 +9,33 @@ type PollListPageProps = {
   initialFilter?: string
 }
 
+type PollSummaryOption = {
+  id: string
+  formattedDate: string
+  yesCount: number
+  noCount: number
+  maybeCount: number
+  missingCount: number
+}
+
+type PollSummary = {
+  options: PollSummaryOption[]
+}
+
+function buildPollSummary(poll: Poll): PollSummary {
+  return {
+    options: poll.options.map((option) => ({
+      id: option.id,
+      formattedDate: formatOptionDate(option),
+      yesCount: voteCount(option, 'yes'),
+      noCount: voteCount(option, 'no'),
+      maybeCount: voteCount(option, 'maybe'),
+      missingCount: missingCount(option),
+    })),
+  }
+}
+
+
 
 function formatCreatedDate(ts?: number): string {
   if (!ts) return ''
@@ -658,16 +685,20 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       }
     }
 
-    async function loadSummary(pollId: string) {
-      setLoadingSummaries((prev) => ({ ...prev, [pollId]: true }))
+    async function loadSummary(poll: Poll) {
+      setLoadingSummaries((prev) => ({ ...prev, [poll.id]: true }))
 
       try {
-        const summary = await fetchPollSummary(pollId)
-        setPollSummaries((prev) => ({ ...prev, [pollId]: summary }))
-      } catch (e) {
-        console.error('Summary failed', pollId, e)
+        const summary = buildPollSummary(poll)
+
+        setPollSummaries((prev) => ({
+          ...prev,
+          [poll.id]: summary,
+        }))
+      } catch (err) {
+        console.error('Summary konnte nicht gebaut werden', poll.id, err)
       } finally {
-        setLoadingSummaries((prev) => ({ ...prev, [pollId]: false }))
+        setLoadingSummaries((prev) => ({ ...prev, [poll.id]: false }))
       }
     }
 
@@ -677,7 +708,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         setPolls(pollData)
 
         pollData.forEach((poll) => {
-          void loadSummary(poll.id)
+          void loadSummary(poll)
         })
       } catch (err) {
         const message =
@@ -1222,27 +1253,15 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                       </thead>
 
                       <tbody>
-                          {isSummaryLoading && !isReady ? (
-                            <tr>
-                              <td
-                                colSpan={5}
-                                style={{
-                                  padding: '0.75rem 0',
-                                  color: '#6b7280',
-                                  fontStyle: 'italic',
-                                }}
-                              >
-                                Lade Zusammenfassung...
-                              </td>
-                            </tr>
-                          ) : poll.options.length > 0 ? (
-                            poll._ui.options.map((option) => (
-                            <tr
-                              key={option.id}
-                              style={{
-                                borderBottom: '1px solid #f0f2f5',
-                              }}
-                            >
+                        {isSummaryLoading && !summary ? (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '0.75rem 0', color: '#6b7280', fontStyle: 'italic' }}>
+                              Lade Zusammenfassung...
+                            </td>
+                          </tr>
+                        ) : summary ? (
+                          summary.options.map((option) => (
+                            <tr key={option.id} style={{ borderBottom: '1px solid #f0f2f5' }}>
                               <td style={{ padding: '0.55rem 0.4rem 0.55rem 0' }}>
                                 {option.formattedDate}
                               </td>
@@ -1262,15 +1281,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                           ))
                         ) : (
                           <tr>
-                            <td
-                              colSpan={5}
-                              style={{
-                                padding: '0.75rem 0',
-                                color: '#6b7280',
-                                fontStyle: 'italic',
-                              }}
-                            >
-                              Keine Optionen vorhanden.
+                            <td colSpan={5} style={{ padding: '0.75rem 0', color: '#6b7280', fontStyle: 'italic' }}>
+                              Keine Daten verfügbar.
                             </td>
                           </tr>
                         )}
