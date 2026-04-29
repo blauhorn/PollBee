@@ -800,18 +800,13 @@ def login_flow_status(state_id: str, response: Response):
 def get_polls(request: Request):
     session = get_current_session(request)
     client = build_client_from_session(session)
-    provisioning_client = build_provisioning_client()
-
+ 
     try:
         raw_polls = client.get_polls()
     except NextcloudApiError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    try:
-        registered_members_normalized, _ = get_all_register_members(provisioning_client)
-    except ProvisioningApiError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
+   
     poll_list = []
 
     for raw_poll in raw_polls:
