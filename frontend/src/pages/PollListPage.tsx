@@ -667,6 +667,25 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [pollSummaries, setPollSummaries] = useState<Record<string, PollSummary>>({})
   const [loadingSummaries, setLoadingSummaries] = useState<Record<string, boolean>>({})
 
+
+  async function loadSummary(poll: Poll) {
+     setLoadingSummaries((prev) => ({ ...prev, [poll.id]: true }))
+
+     try {
+       const summary = buildPollSummary(poll)
+        setPollSummaries((prev) => ({
+         ...prev,
+         [poll.id]: summary,
+       }))
+     } catch (err) {
+       console.error('Summary konnte nicht gebaut werden', poll.id, err)
+     } finally {
+       setLoadingSummaries((prev) => ({ ...prev, [poll.id]: false }))
+     }
+   }
+
+
+
   useEffect(() => {
     async function loadCurrentUser() {
       try {
@@ -682,23 +701,6 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         }
 
         setError(message)
-      }
-    }
-
-    async function loadSummary(poll: Poll) {
-      setLoadingSummaries((prev) => ({ ...prev, [poll.id]: true }))
-
-      try {
-        const summary = buildPollSummary(poll)
-
-        setPollSummaries((prev) => ({
-          ...prev,
-          [poll.id]: summary,
-        }))
-      } catch (err) {
-        console.error('Summary konnte nicht gebaut werden', poll.id, err)
-      } finally {
-        setLoadingSummaries((prev) => ({ ...prev, [poll.id]: false }))
       }
     }
 
