@@ -1,9 +1,8 @@
-import { useEffect, useRef, useMemo, useState } from 'react'
+import { memo, useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, fetchShareGroups, type Poll, type PollOption, type CreatePollOptionInput, type User, type GroupOption } from '../api'
 import IconButton from '../components/IconButton'
-import { LogOut } from 'lucide-react'
 import {showSuccess, showError, showLoading} from '../utils/toast'
 
 type PollListPageProps = {
@@ -226,6 +225,359 @@ function DateFilterSummary({
   )
 }
 
+type PollListStickyProps = {
+  currentUser: User | null
+  openPollCount: number
+  textFilter: string
+  setTextFilter: (value: string) => void
+  dateFrom: string
+  setDateFrom: (value: string) => void
+  dateTo: string
+  setDateTo: (value: string) => void
+  menuOpen: boolean
+  setMenuOpen: React.Dispatch<React.SetStateAction<boolean>>
+  handleLogout: () => void
+  setShowInfoScreen: (value: boolean) => void
+  basePath: string
+}
+
+const PollListSticky = memo(function PollListSticky({
+  currentUser,
+  openPollCount,
+  textFilter,
+  setTextFilter,
+  dateFrom,
+  setDateFrom,
+  dateTo,
+  setDateTo,
+  menuOpen,
+  setMenuOpen,
+  handleLogout,
+  setShowInfoScreen,
+  basePath,
+}: PollListStickyProps) {
+  return (
+    <section
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 20,
+        background: '#ffffff',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '0.25rem 0.25rem',
+      }}
+    >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.65rem',
+            marginBottom: '0.5rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
+            <div
+              style={{
+                position: 'relative', // wichtig für Dropdown
+                flexShrink: 0,
+              }}
+            >
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setMenuOpen((prev) => !prev)
+                }}
+                style={{
+                  width: '2.75rem',
+                  height: '2.75rem',
+                  borderRadius: '999px',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  background: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  color: '#374151',
+                  cursor: 'pointer',
+                }}
+              >
+                {currentUser?.avatarUrl ? (
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.displayName}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                ) : (
+                  <span>
+                    {currentUser?.displayName?.slice(0, 1).toUpperCase() ?? '?'}
+                  </span>
+                )}
+              </div>
+
+               {menuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '3.2rem',
+                      left: 0,
+                      background: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+                      minWidth: '180px',
+                      zIndex: 1000,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '0.7rem 0.9rem',
+                        fontSize: '0.9rem',
+                        color: '#374151',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: '#ffffff',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {currentUser?.displayName}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <IconButton
+                          onClick={handleLogout}
+                          title="Abmelden"
+                          icon={<LogOut size={20} />}
+                        />
+                      <IconButton
+                          onClick={() => setShowInfoScreen(true)}
+                          title="Info"
+                          icon={<span style={{ fontWeight: 700, fontSize: '1.05rem' }}>?</span>}
+                        />
+                    </div>
+
+                    
+                </div>
+              )}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                }}
+              >
+                {getGreeting()}
+                {currentUser?.displayName ? `, ${currentUser.displayName}` : ''}
+              </div>
+
+              <div
+                style={{
+                  marginTop: '0.15rem',
+                  fontSize: '0.85rem',
+                  color: '#6b7280',
+                  lineHeight: 1.2,
+                }}
+              >
+                PollBee - <strong>{openPollCount}</strong>{' '}
+                {openPollCount === 1 ? 'offene Umfrage' : 'offene Umfragen'}
+              </div>
+              
+            </div>
+          </div>
+
+		<div
+		  style={{
+		    display: 'flex',
+		    alignItems: 'center',
+		    justifyContent: 'center',
+		    flexShrink: 0,
+		    minWidth: '4.5rem',
+		    background: '#f3f4f6',
+		    borderRadius: '0.5rem',
+		    padding: '0.35rem 0.5rem',
+		  }}
+		>
+		  <img
+        src={`${basePath}branding/logo-ntso.svg`}
+        alt="NTSO"
+        style={{
+          maxHeight: '2rem',
+          maxWidth: '5rem',
+          display: 'block',
+          objectFit: 'contain',
+        }}
+      />
+		</div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+  
+        <label
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.35rem',
+          }}
+        >
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={textFilter}
+              onChange={(e) => setTextFilter(e.target.value)}
+              placeholder="Titel oder Beschreibung filtern"
+              style={{
+                padding: '0.55rem 2rem 0.55rem 0.7rem', // rechts Platz für X
+                border: '1px solid #d1d5db',
+                borderRadius: '0.55rem',
+                font: 'inherit',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            />
+
+            {textFilter && (
+              <button
+                type="button"
+                onClick={() => setTextFilter('')}
+                aria-label="Filter löschen"
+                style={{
+                  position: 'absolute',
+                  right: '0.45rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  fontSize: '0.9rem',
+                  lineHeight: 1,
+                  padding: '0.2rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '999px',
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </label>
+           <div
+            style={{
+              borderTop: '1px solid #e5e7eb',
+              padding: '0.45rem 0.75rem',
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr 1fr auto',
+              gap: '0.5rem',
+              alignItems: 'center',
+              background: '#ffffff',
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.95rem',
+                color: '#4b5563',
+                width: '1.5rem',
+              }}
+            >
+              📅
+            </div>
+
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              aria-label="Datum von"
+              style={{
+                padding: '0.45rem 0.65rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                font: 'inherit',
+                minHeight: '2.1rem',
+                background: '#ffffff',
+                minWidth: 0,
+                boxSizing: 'border-box',
+              }}
+            />
+
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              aria-label="Datum bis"
+              style={{
+                padding: '0.45rem 0.65rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                font: 'inherit',
+                minHeight: '2.1rem',
+                background: '#ffffff',
+                minWidth: 0,
+                boxSizing: 'border-box',
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setDateFrom('')
+                setDateTo('')
+              }}
+              aria-label="Datumsfilter löschen"
+              title="Datumsfilter löschen"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: '#6b7280',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1rem',
+                lineHeight: 1,
+                width: '1.75rem',
+                height: '1.75rem',
+                borderRadius: '999px',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      
+    </section>
+  )
+})
 
 export default function PollListPage({ initialFilter = '' }: PollListPageProps) {
   const navigate = useNavigate()
@@ -593,324 +945,21 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         }
       `}
     </style>
-      <section
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 20,
-          background: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '0.25rem 0.25rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.65rem',
-            marginBottom: '0.5rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              minWidth: 0,
-              flex: 1,
-            }}
-          >
-            <div
-              style={{
-                position: 'relative', // wichtig für Dropdown
-                flexShrink: 0,
-              }}
-            >
-              <div
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setMenuOpen((prev) => !prev)
-                }}
-                style={{
-                  width: '2.75rem',
-                  height: '2.75rem',
-                  borderRadius: '999px',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  background: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  color: '#374151',
-                  cursor: 'pointer',
-                }}
-              >
-                {currentUser?.avatarUrl ? (
-                  <img
-                    src={currentUser.avatarUrl}
-                    alt={currentUser.displayName}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
-                  />
-                ) : (
-                  <span>
-                    {currentUser?.displayName?.slice(0, 1).toUpperCase() ?? '?'}
-                  </span>
-                )}
-              </div>
-
-               {menuOpen && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      position: 'absolute',
-                      top: '3.2rem',
-                      left: 0,
-                      background: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.75rem',
-                      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-                      minWidth: '180px',
-                      zIndex: 1000,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: '0.7rem 0.9rem',
-                        fontSize: '0.9rem',
-                        color: '#374151',
-                        borderBottom: '1px solid #f1f5f9',
-                        background: '#ffffff',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {currentUser?.displayName}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <IconButton
-                          onClick={handleLogout}
-                          title="Abmelden"
-                          icon={<LogOut size={20} />}
-                        />
-                      <IconButton
-                          onClick={() => setShowInfoScreen(true)}
-                          title="Info"
-                          icon={<span style={{ fontWeight: 700, fontSize: '1.05rem' }}>?</span>}
-                        />
-                    </div>
-
-                    
-                </div>
-              )}
-            </div>
-
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                }}
-              >
-                {getGreeting()}
-                {currentUser?.displayName ? `, ${currentUser.displayName}` : ''}
-              </div>
-
-              <div
-                style={{
-                  marginTop: '0.15rem',
-                  fontSize: '0.85rem',
-                  color: '#6b7280',
-                  lineHeight: 1.2,
-                }}
-              >
-                PollBee - <strong>{openPollCount}</strong>{' '}
-                {openPollCount === 1 ? 'offene Umfrage' : 'offene Umfragen'}
-              </div>
-              
-            </div>
-          </div>
-
-		<div
-		  style={{
-		    display: 'flex',
-		    alignItems: 'center',
-		    justifyContent: 'center',
-		    flexShrink: 0,
-		    minWidth: '4.5rem',
-		    background: '#f3f4f6',
-		    borderRadius: '0.5rem',
-		    padding: '0.35rem 0.5rem',
-		  }}
-		>
-		  <img
-        src={`${BASE_PATH}branding/logo-ntso.svg`}
-        alt="NTSO"
-        style={{
-          maxHeight: '2rem',
-          maxWidth: '5rem',
-          display: 'block',
-          objectFit: 'contain',
-        }}
+      <PollListSticky
+        currentUser={currentUser}
+        openPollCount={openPollCount}
+        textFilter={textFilter}
+        setTextFilter={setTextFilter}
+        dateFrom={dateFrom}
+        setDateFrom={setDateFrom}
+        dateTo={dateTo}
+        setDateTo={setDateTo}
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+        handleLogout={handleLogout}
+        setShowInfoScreen={setShowInfoScreen}
+        basePath={BASE_PATH}
       />
-		</div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-          }}
-        >
-  
-        <label
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.35rem',
-          }}
-        >
-          <div style={{ position: 'relative' }}>
-            <input
-              type="text"
-              value={textFilter}
-              onChange={(e) => setTextFilter(e.target.value)}
-              placeholder="Titel oder Beschreibung filtern"
-              style={{
-                padding: '0.55rem 2rem 0.55rem 0.7rem', // rechts Platz für X
-                border: '1px solid #d1d5db',
-                borderRadius: '0.55rem',
-                font: 'inherit',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            />
-
-            {textFilter && (
-              <button
-                type="button"
-                onClick={() => setTextFilter('')}
-                aria-label="Filter löschen"
-                style={{
-                  position: 'absolute',
-                  right: '0.45rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#6b7280',
-                  fontSize: '0.9rem',
-                  lineHeight: 1,
-                  padding: '0.2rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '999px',
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </label>
-           <div
-            style={{
-              borderTop: '1px solid #e5e7eb',
-              padding: '0.45rem 0.75rem',
-              display: 'grid',
-              gridTemplateColumns: 'auto 1fr 1fr auto',
-              gap: '0.5rem',
-              alignItems: 'center',
-              background: '#ffffff',
-            }}
-          >
-            <div
-              aria-hidden="true"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.95rem',
-                color: '#4b5563',
-                width: '1.5rem',
-              }}
-            >
-              📅
-            </div>
-
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              aria-label="Datum von"
-              style={{
-                padding: '0.45rem 0.65rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.5rem',
-                font: 'inherit',
-                minHeight: '2.1rem',
-                background: '#ffffff',
-                minWidth: 0,
-                boxSizing: 'border-box',
-              }}
-            />
-
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              aria-label="Datum bis"
-              style={{
-                padding: '0.45rem 0.65rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.5rem',
-                font: 'inherit',
-                minHeight: '2.1rem',
-                background: '#ffffff',
-                minWidth: 0,
-                boxSizing: 'border-box',
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                setDateFrom('')
-                setDateTo('')
-              }}
-              aria-label="Datumsfilter löschen"
-              title="Datumsfilter löschen"
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: '#6b7280',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1rem',
-                lineHeight: 1,
-                width: '1.75rem',
-                height: '1.75rem',
-                borderRadius: '999px',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      </section>
 
       <section
       ref={listScrollRef}
