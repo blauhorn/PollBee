@@ -1761,19 +1761,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           }
         />
 
-        <PollOwnerActionMenu
-          canEdit={canManageAuthors}
-          canDelete={canManageAuthors}
-          onEdit={() => {
-            // später: openEditPollDialog()
-            showError('Bearbeiten ist noch nicht implementiert.')
-          }}
-          onDelete={() => {
-            // später: openDeletePollDialog()
-            showError('Löschen ist noch nicht implementiert.')
-          }}
-          onManageAuthors={openAuthorDialog}
-        />
+
 
         <IconButton
           onClick={openCalendarDialog}
@@ -1792,6 +1780,20 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           title="Stimme speichern"
           icon={<Check size={20} />}
           variant="primary"
+        />
+
+        <PollOwnerActionMenu
+          canEdit={canManageAuthors}
+          canDelete={canManageAuthors}
+          onEdit={() => {
+            // später: openEditPollDialog()
+            showError('Bearbeiten ist noch nicht implementiert.')
+          }}
+          onDelete={() => {
+            // später: openDeletePollDialog()
+            showError('Löschen ist noch nicht implementiert.')
+          }}
+          onManageAuthors={openAuthorDialog}
         />
       </div>
     </div>
