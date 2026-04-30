@@ -366,6 +366,37 @@ const menuItemStyle: React.CSSProperties = {
   cursor: 'pointer',
 }
 
+const dialogBackdropStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 1400,
+  background: 'rgba(15, 23, 42, 0.45)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '1rem',
+}
+
+const dialogCardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '34rem',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  background: '#ffffff',
+  borderRadius: '1rem',
+  padding: '1rem',
+  boxShadow: '0 20px 60px rgba(15, 23, 42, 0.35)',
+}
+
+const dialogInputStyle: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '0.7rem 0.8rem',
+  border: '1px solid #d1d5db',
+  borderRadius: '0.65rem',
+  font: 'inherit',
+}
+
 export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const navigate = useNavigate()
   const pollId = forcedPollId ?? params.pollId ?? ''
@@ -756,98 +787,98 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   }
 
   function openEditPollDialog() {
-  if (!poll) return
+      if (!poll) return
 
-  setEditPollTitle(poll.title || '')
-  setEditPollDescription(poll.description || '')
-  setEditPollError('')
-  setShowEditPollDialog(true)
-}
-
-function closeEditPollDialog() {
-  if (editPollLoading) return
-  setShowEditPollDialog(false)
-}
-
-async function handleUpdatePollText() {
-  if (!poll || editPollLoading) return
-
-  const title = editPollTitle.trim()
-  const description = editPollDescription.trim()
-
-  if (!title) {
-    setEditPollError('Bitte einen Titel eingeben.')
-    return
+      setEditPollTitle(poll.title || '')
+      setEditPollDescription(poll.description || '')
+      setEditPollError('')
+      setShowEditPollDialog(true)
   }
 
-  setEditPollLoading(true)
-  setEditPollError('')
-
-  try {
-    const result = await updatePollText(poll.id, {
-      title,
-      description,
-    })
-
-    setPoll(result.poll)
+  function closeEditPollDialog() {
+    if (editPollLoading) return
     setShowEditPollDialog(false)
-    showSuccess('Umfrage wurde aktualisiert.')
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Umfrage konnte nicht aktualisiert werden.'
-
-    setEditPollError(message)
-    showError(message)
-  } finally {
-    setEditPollLoading(false)
-  }
-}
-
-function openDeletePollDialog() {
-  if (!poll) return
-
-  setDeletePollConfirmTitle('')
-  setDeletePollError('')
-  setShowDeletePollDialog(true)
-}
-
-function closeDeletePollDialog() {
-  if (deletePollLoading) return
-  setShowDeletePollDialog(false)
-}
-
-async function handleDeletePoll() {
-  if (!poll || deletePollLoading) return
-
-  if (deletePollConfirmTitle.trim() !== poll.title.trim()) {
-    setDeletePollError('Bitte den Umfragetitel exakt eingeben.')
-    return
   }
 
-  setDeletePollLoading(true)
-  setDeletePollError('')
+  async function handleUpdatePollText() {
+    if (!poll || editPollLoading) return
 
-  try {
-    await deletePoll(poll.id)
-    showSuccess('Umfrage wurde gelöscht.')
-    navigate('/polls', {
-      replace: true,
-      state: { message: 'Die Umfrage wurde gelöscht.' },
-    })
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'Umfrage konnte nicht gelöscht werden.'
+    const title = editPollTitle.trim()
+    const description = editPollDescription.trim()
 
-    setDeletePollError(message)
-    showError(message)
-  } finally {
-    setDeletePollLoading(false)
+    if (!title) {
+      setEditPollError('Bitte einen Titel eingeben.')
+      return
+    }
+
+    setEditPollLoading(true)
+    setEditPollError('')
+
+    try {
+      const result = await updatePollText(poll.id, {
+        title,
+        description,
+      })
+
+      setPoll(result.poll)
+      setShowEditPollDialog(false)
+      showSuccess('Umfrage wurde aktualisiert.')
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Umfrage konnte nicht aktualisiert werden.'
+
+      setEditPollError(message)
+      showError(message)
+    } finally {
+      setEditPollLoading(false)
+    }
   }
-}
+
+  function openDeletePollDialog() {
+    if (!poll) return
+
+    setDeletePollConfirmTitle('')
+    setDeletePollError('')
+    setShowDeletePollDialog(true)
+  }
+
+  function closeDeletePollDialog() {
+    if (deletePollLoading) return
+    setShowDeletePollDialog(false)
+  }
+
+  async function handleDeletePoll() {
+    if (!poll || deletePollLoading) return
+
+    if (deletePollConfirmTitle.trim() !== poll.title.trim()) {
+      setDeletePollError('Bitte den Umfragetitel exakt eingeben.')
+      return
+    }
+
+    setDeletePollLoading(true)
+    setDeletePollError('')
+
+    try {
+      await deletePoll(poll.id)
+      showSuccess('Umfrage wurde gelöscht.')
+      navigate('/polls', {
+        replace: true,
+        state: { message: 'Die Umfrage wurde gelöscht.' },
+      })
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Umfrage konnte nicht gelöscht werden.'
+
+      setDeletePollError(message)
+      showError(message)
+    } finally {
+      setDeletePollLoading(false)
+    }
+  }
 
   async function handleCreateCalendarEntries() {
     if (!poll?.id || !selectedCalendarUri || calendarSaving) {
@@ -2651,6 +2682,131 @@ async function handleDeletePoll() {
               />              
 
             </div>
+          </div>
+        </div>
+      </div>
+    ) : null}
+
+        {showEditPollDialog ? (
+      <div style={dialogBackdropStyle}>
+        <div style={dialogCardStyle}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem' }}>
+            Titel & Beschreibung ändern
+          </div>
+
+          <label style={{ display: 'block', marginBottom: '0.8rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.35rem' }}>Titel</div>
+            <input
+              type="text"
+              value={editPollTitle}
+              onChange={(e) => setEditPollTitle(e.target.value)}
+              style={dialogInputStyle}
+            />
+          </label>
+
+          <label style={{ display: 'block', marginBottom: '0.8rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.35rem' }}>
+              Beschreibung
+            </div>
+            <textarea
+              value={editPollDescription}
+              onChange={(e) => setEditPollDescription(e.target.value)}
+              rows={5}
+              style={{
+                ...dialogInputStyle,
+                resize: 'vertical',
+              }}
+            />
+          </label>
+
+          {editPollError ? (
+            <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '0.8rem' }}>
+              {editPollError}
+            </div>
+          ) : null}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+            <IconButton
+              onClick={closeEditPollDialog}
+              disabled={editPollLoading}
+              title="Abbrechen"
+              icon={<X size={18} />}
+            />
+            <IconButton
+              onClick={handleUpdatePollText}
+              disabled={editPollLoading}
+              title="Speichern"
+              icon={<Check size={18} />}
+              variant="primary"
+            />
+          </div>
+        </div>
+      </div>
+    ) : null}
+
+    {showDeletePollDialog ? (
+      <div style={dialogBackdropStyle}>
+        <div style={dialogCardStyle}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+            Umfrage löschen
+          </div>
+
+          <p style={{ color: '#4b5563', lineHeight: 1.45 }}>
+            Diese Aktion kann nicht rückgängig gemacht werden. Bitte gib zur
+            Bestätigung den Titel der Umfrage ein:
+          </p>
+
+          <div
+            style={{
+              fontWeight: 700,
+              padding: '0.65rem',
+              borderRadius: '0.65rem',
+              background: '#fef2f2',
+              color: '#991b1b',
+              marginBottom: '0.8rem',
+            }}
+          >
+            {poll?.title}
+          </div>
+
+          <input
+            type="text"
+            value={deletePollConfirmTitle}
+            onChange={(e) => setDeletePollConfirmTitle(e.target.value)}
+            placeholder="Titel exakt eingeben"
+            style={dialogInputStyle}
+          />
+
+          {deletePollError ? (
+            <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginTop: '0.8rem' }}>
+              {deletePollError}
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '0.6rem',
+              marginTop: '1rem',
+            }}
+          >
+            <IconButton
+              onClick={closeDeletePollDialog}
+              disabled={deletePollLoading}
+              title="Abbrechen"
+              icon={<X size={18} />}
+            />
+            <IconButton
+              onClick={handleDeletePoll}
+              disabled={
+                deletePollLoading ||
+                deletePollConfirmTitle.trim() !== poll?.title.trim()
+              }
+              title="Umfrage löschen"
+              icon={<Trash2 size={18} />}
+              variant="danger"
+            />
           </div>
         </div>
       </div>
