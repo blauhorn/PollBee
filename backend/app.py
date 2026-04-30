@@ -1334,6 +1334,16 @@ def get_poll_debug(poll_id: str, request: Request):
         },
     }
 
+@app.delete("/polls/{poll_id}")
+def delete_poll(poll_id: str, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
+    try:
+        client.delete_poll(poll_id)
+        return {"ok": True}
+    except NextcloudApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 @app.post("/polls/{poll_id}/votes")
 def submit_vote(poll_id: str, payload: VoteRequest, request: Request):

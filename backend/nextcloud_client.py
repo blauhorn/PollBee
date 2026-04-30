@@ -801,6 +801,23 @@ class NextcloudClient:
                 f"Update poll failed: {response.status_code} {response.text}"
             )
 
+    def delete_poll(self, poll_id: str) -> None:
+        response = self._request(
+            "DELETE",
+            f"/apps/polls/poll/{poll_id}",
+            headers={
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "NC-Polls-Client-Id": "pollbee",
+                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
+            },
+        )
+
+        if response.status_code not in (200, 202, 204):
+            raise NextcloudApiError(
+                f"Delete poll failed: {response.status_code} {response.text}"
+            )
+
     @staticmethod
     def start_login_flow_v2(base_url: str) -> dict[str, Any]:
         normalized_base_url = base_url.rstrip("/")
