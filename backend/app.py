@@ -88,6 +88,10 @@ class CreatePollRequest(BaseModel):
     options: list[CreatePollOptionRequest]
     shareGroupIds: list[str] = []
 
+class PollTextUpdateRequest(BaseModel):
+    title: str
+    description: str = ""
+
 def first_nonempty_str(*values):
     for value in values:
         if value is None:
@@ -1272,6 +1276,34 @@ def toggle_poll_closed(poll_id: str, request: Request):
         "ok": True,
         "poll": get_poll_by_id(poll_id, request),
     }
+
+@app.put("/polls/{poll_id}/text")
+def update_poll_text(poll_id: str, payload: PollTextUpdateRequest, request: Request):
+    session = get_current_session(request)
+    client = build_client_from_session(session)
+
+    title = payload.title.strip()
+    description = payload.description.strip()
+
+    if not title:
+        raise HTTPException(status_code=400, detail="Titel darf nicht leer sein.")
+
+    try:
+        poll_response = client.update_poll(
+            poll_id,
+            {
+                "title": title,
+                "description": description,
+            },
+        )
+
+        poll_data = poll_response.get("poll", poll_response)
+
+        return {
+            "poll": build_poll_detail(client, poll_data),
+        }
+    except NextcloudApiError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 @app.get("/polls/{poll_id}/debug")
 def get_poll_debug(poll_id: str, request: Request):

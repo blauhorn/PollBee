@@ -939,3 +939,10 @@ class NextcloudClient:
             raise NextcloudApiError(
                 f"Delete share failed with status {response.status_code}: {response.text[:500]}"
             ) from exc
+        
+    def update_poll(self, poll_id: str, payload: dict):
+        return self._request(
+            "PUT",
+            f"/apps/polls/poll/{poll_id}",
+            json=payload,
+        )
