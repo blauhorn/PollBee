@@ -19,6 +19,8 @@ import {
   createPollShare,
   setPollShareAdmin,
   removePollShareAdmin,
+  updatePollText,
+  deletePoll,
   type PollDetail,
   type PollOption,
   type PollParticipant,
@@ -398,6 +400,19 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [selectedNewPollAdmins, setSelectedNewPollAdmins] = useState<UserSearchResult[]>([])
   const [pollAdminConfirm, setPollAdminConfirm] = useState(false)
 
+  
+  const [showEditPollDialog, setShowEditPollDialog] = useState(false)
+  const [editPollTitle, setEditPollTitle] = useState('')
+  const [editPollDescription, setEditPollDescription] = useState('')
+  const [editPollLoading, setEditPollLoading] = useState(false)
+  const [editPollError, setEditPollError] = useState('')
+
+  const [showDeletePollDialog, setShowDeletePollDialog] = useState(false)
+  const [deletePollLoading, setDeletePollLoading] = useState(false)
+  const [deletePollConfirmTitle, setDeletePollConfirmTitle] = useState('')
+  const [deletePollError, setDeletePollError] = useState('')
+
+
   const [showCalendarDialog, setShowCalendarDialog] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(false)
   const [calendarSaving, setCalendarSaving] = useState(false)
@@ -413,6 +428,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [calendarEndTime, setCalendarEndTime] = useState('22:00')
   const [calendarOptionSelections, setCalendarOptionSelections] = useState<
     Record<string, { selected: boolean; entryStatus: 'inquiry' | 'fixed' | 'canceled' }>
+
 > ({})
 
   
@@ -738,6 +754,100 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     if (calendarSaving) return
     setShowCalendarDialog(false)
   }
+
+  function openEditPollDialog() {
+  if (!poll) return
+
+  setEditPollTitle(poll.title || '')
+  setEditPollDescription(poll.description || '')
+  setEditPollError('')
+  setShowEditPollDialog(true)
+}
+
+function closeEditPollDialog() {
+  if (editPollLoading) return
+  setShowEditPollDialog(false)
+}
+
+async function handleUpdatePollText() {
+  if (!poll || editPollLoading) return
+
+  const title = editPollTitle.trim()
+  const description = editPollDescription.trim()
+
+  if (!title) {
+    setEditPollError('Bitte einen Titel eingeben.')
+    return
+  }
+
+  setEditPollLoading(true)
+  setEditPollError('')
+
+  try {
+    const result = await updatePollText(poll.id, {
+      title,
+      description,
+    })
+
+    setPoll(result.poll)
+    setShowEditPollDialog(false)
+    showSuccess('Umfrage wurde aktualisiert.')
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Umfrage konnte nicht aktualisiert werden.'
+
+    setEditPollError(message)
+    showError(message)
+  } finally {
+    setEditPollLoading(false)
+  }
+}
+
+function openDeletePollDialog() {
+  if (!poll) return
+
+  setDeletePollConfirmTitle('')
+  setDeletePollError('')
+  setShowDeletePollDialog(true)
+}
+
+function closeDeletePollDialog() {
+  if (deletePollLoading) return
+  setShowDeletePollDialog(false)
+}
+
+async function handleDeletePoll() {
+  if (!poll || deletePollLoading) return
+
+  if (deletePollConfirmTitle.trim() !== poll.title.trim()) {
+    setDeletePollError('Bitte den Umfragetitel exakt eingeben.')
+    return
+  }
+
+  setDeletePollLoading(true)
+  setDeletePollError('')
+
+  try {
+    await deletePoll(poll.id)
+    showSuccess('Umfrage wurde gelöscht.')
+    navigate('/polls', {
+      replace: true,
+      state: { message: 'Die Umfrage wurde gelöscht.' },
+    })
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Umfrage konnte nicht gelöscht werden.'
+
+    setDeletePollError(message)
+    showError(message)
+  } finally {
+    setDeletePollLoading(false)
+  }
+}
 
   async function handleCreateCalendarEntries() {
     if (!poll?.id || !selectedCalendarUri || calendarSaving) {
@@ -1789,14 +1899,8 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         <PollOwnerActionMenu
           canEdit={canManageAuthors}
           canDelete={canManageAuthors}
-          onEdit={() => {
-            // später: openEditPollDialog()
-            showError('Bearbeiten ist noch nicht implementiert.')
-          }}
-          onDelete={() => {
-            // später: openDeletePollDialog()
-            showError('Löschen ist noch nicht implementiert.')
-          }}
+          onEdit={openEditPollDialog}
+          onDelete={openDeletePollDialog}
           onManageAuthors={openAuthorDialog}
         />
       </div>
