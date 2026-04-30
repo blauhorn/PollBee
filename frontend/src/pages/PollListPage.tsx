@@ -890,7 +890,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         },
       }
     })
-  }, [filteredPolls, pollSummaries])
+    .sort((a, b) => {
+      if (a._ui.needsResponse !== b._ui.needsResponse) {
+        return a._ui.needsResponse ? -1 : 1
+      }
+
+      return 0
+    })
+}, [filteredPolls, pollSummaries])
 
   const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
