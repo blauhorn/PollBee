@@ -894,11 +894,28 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       }
     })
     .sort((a, b) => {
-      if (a._ui.needsResponse !== b._ui.needsResponse) {
-        return a._ui.needsResponse ? -1 : 1
+      // 1. Priorität: offene Stimme
+      const aNeeds = !a._ui.closed && a._ui.needsResponse
+      const bNeeds = !b._ui.closed && b._ui.needsResponse
+
+      if (aNeeds !== bNeeds) {
+        return aNeeds ? -1 : 1
       }
 
-      return 0
+      // 2. Priorität: neueste Option (max timestamp)
+      const getLatestTimestamp = (poll: typeof a) => {
+        const options = poll._ui.options ?? []
+        if (options.length === 0) return 0
+
+        return Math.max(
+          ...options.map((opt: any) => Number(opt.timestamp ?? 0))
+        )
+      }
+
+      const aTime = getLatestTimestamp(a)
+      const bTime = getLatestTimestamp(b)
+
+      return bTime - aTime // neueste zuerst
     })
 }, [filteredPolls, pollSummaries])
 
