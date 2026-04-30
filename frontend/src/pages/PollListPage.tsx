@@ -16,6 +16,7 @@ type PollSummaryOption = {
   noCount: number
   maybeCount: number
   missingCount: number
+  currentUser?: 'yes' | 'no' | 'maybe' | null
 }
 
 type PollSummary = {
@@ -690,6 +691,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
           noCount: Number(option.voteSummary?.no ?? 0),
           maybeCount: Number(option.voteSummary?.maybe ?? 0),
           missingCount: Number(option.voteSummary?.missing ?? 0),
+          currentUser: option.voteSummary?.currentUser ?? null,
         })),
       }
 
@@ -850,7 +852,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             maybe: option.maybeCount,
             count: option.yesCount + option.noCount + option.maybeCount,
             missing: option.missingCount,
-            currentUser: null,
+            currentUser: option.currentUser ?? null,
           },
         })) ?? []
 
