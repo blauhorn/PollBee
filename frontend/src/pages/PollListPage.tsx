@@ -1,14 +1,41 @@
-import { useEffect, useRef, useMemo, useState } from 'react'
+import { memo, useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, fetchShareGroups, type Poll, type PollOption, type CreatePollOptionInput, type User, type GroupOption } from '../api'
 import IconButton from '../components/IconButton'
-import { LogOut } from 'lucide-react'
 import {showSuccess, showError, showLoading} from '../utils/toast'
 
 type PollListPageProps = {
   initialFilter?: string
 }
+
+type PollSummaryOption = {
+  id: string
+  formattedDate: string
+  yesCount: number
+  noCount: number
+  maybeCount: number
+  missingCount: number
+  currentUser?: 'yes' | 'no' | 'maybe' | null
+}
+
+type PollSummary = {
+  options: PollSummaryOption[]
+}
+
+function buildPollSummary(poll: Poll): PollSummary {
+  return {
+    options: poll.options.map((option) => ({
+      id: option.id,
+      formattedDate: formatOptionDate(option),
+      yesCount: voteCount(option, 'yes'),
+      noCount: voteCount(option, 'no'),
+      maybeCount: voteCount(option, 'maybe'),
+      missingCount: missingCount(option),
+    })),
+  }
+}
+
 
 
 function formatCreatedDate(ts?: number): string {
@@ -226,6 +253,359 @@ function DateFilterSummary({
   )
 }
 
+type PollListStickyProps = {
+  currentUser: User | null
+  openPollCount: number
+  textFilter: string
+  setTextFilter: (value: string) => void
+  dateFrom: string
+  setDateFrom: (value: string) => void
+  dateTo: string
+  setDateTo: (value: string) => void
+  menuOpen: boolean
+  setMenuOpen: React.Dispatch<React.SetStateAction<boolean>>
+  handleLogout: () => void
+  setShowInfoScreen: (value: boolean) => void
+  basePath: string
+}
+
+const PollListSticky = memo(function PollListSticky({
+  currentUser,
+  openPollCount,
+  textFilter,
+  setTextFilter,
+  dateFrom,
+  setDateFrom,
+  dateTo,
+  setDateTo,
+  menuOpen,
+  setMenuOpen,
+  handleLogout,
+  setShowInfoScreen,
+  basePath,
+}: PollListStickyProps) {
+  return (
+    <section
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 20,
+        background: '#ffffff',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '0.25rem 0.25rem',
+      }}
+    >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.65rem',
+            marginBottom: '0.5rem',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              minWidth: 0,
+              flex: 1,
+            }}
+          >
+            <div
+              style={{
+                position: 'relative', // wichtig für Dropdown
+                flexShrink: 0,
+              }}
+            >
+              <div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setMenuOpen((prev) => !prev)
+                }}
+                style={{
+                  width: '2.75rem',
+                  height: '2.75rem',
+                  borderRadius: '999px',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  background: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  color: '#374151',
+                  cursor: 'pointer',
+                }}
+              >
+                {currentUser?.avatarUrl ? (
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.displayName}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                ) : (
+                  <span>
+                    {currentUser?.displayName?.slice(0, 1).toUpperCase() ?? '?'}
+                  </span>
+                )}
+              </div>
+
+               {menuOpen && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      position: 'absolute',
+                      top: '3.2rem',
+                      left: 0,
+                      background: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.75rem',
+                      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+                      minWidth: '180px',
+                      zIndex: 1000,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: '0.7rem 0.9rem',
+                        fontSize: '0.9rem',
+                        color: '#374151',
+                        borderBottom: '1px solid #f1f5f9',
+                        background: '#ffffff',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {currentUser?.displayName}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                      <IconButton
+                          onClick={handleLogout}
+                          title="Abmelden"
+                          icon={<LogOut size={20} />}
+                        />
+                      <IconButton
+                          onClick={() => setShowInfoScreen(true)}
+                          title="Info"
+                          icon={<span style={{ fontWeight: 700, fontSize: '1.05rem' }}>?</span>}
+                        />
+                    </div>
+
+                    
+                </div>
+              )}
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  lineHeight: 1.2,
+                }}
+              >
+                {getGreeting()}
+                {currentUser?.displayName ? `, ${currentUser.displayName}` : ''}
+              </div>
+
+              <div
+                style={{
+                  marginTop: '0.15rem',
+                  fontSize: '0.85rem',
+                  color: '#6b7280',
+                  lineHeight: 1.2,
+                }}
+              >
+                PollBee - <strong>{openPollCount}</strong>{' '}
+                {openPollCount === 1 ? 'offene Umfrage' : 'offene Umfragen'}
+              </div>
+              
+            </div>
+          </div>
+
+		<div
+		  style={{
+		    display: 'flex',
+		    alignItems: 'center',
+		    justifyContent: 'center',
+		    flexShrink: 0,
+		    minWidth: '4.5rem',
+		    background: '#f3f4f6',
+		    borderRadius: '0.5rem',
+		    padding: '0.35rem 0.5rem',
+		  }}
+		>
+		  <img
+        src={`${basePath}branding/logo-ntso.svg`}
+        alt="NTSO"
+        style={{
+          maxHeight: '2rem',
+          maxWidth: '5rem',
+          display: 'block',
+          objectFit: 'contain',
+        }}
+      />
+		</div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+          }}
+        >
+  
+        <label
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.35rem',
+          }}
+        >
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              value={textFilter}
+              onChange={(e) => setTextFilter(e.target.value)}
+              placeholder="Titel oder Beschreibung filtern"
+              style={{
+                padding: '0.55rem 2rem 0.55rem 0.7rem', // rechts Platz für X
+                border: '1px solid #d1d5db',
+                borderRadius: '0.55rem',
+                font: 'inherit',
+                width: '100%',
+                boxSizing: 'border-box',
+              }}
+            />
+
+            {textFilter && (
+              <button
+                type="button"
+                onClick={() => setTextFilter('')}
+                aria-label="Filter löschen"
+                style={{
+                  position: 'absolute',
+                  right: '0.45rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  fontSize: '0.9rem',
+                  lineHeight: 1,
+                  padding: '0.2rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '999px',
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </label>
+           <div
+            style={{
+              borderTop: '1px solid #e5e7eb',
+              padding: '0.45rem 0.75rem',
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr 1fr auto',
+              gap: '0.5rem',
+              alignItems: 'center',
+              background: '#ffffff',
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.95rem',
+                color: '#4b5563',
+                width: '1.5rem',
+              }}
+            >
+              📅
+            </div>
+
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              aria-label="Datum von"
+              style={{
+                padding: '0.45rem 0.65rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                font: 'inherit',
+                minHeight: '2.1rem',
+                background: '#ffffff',
+                minWidth: 0,
+                boxSizing: 'border-box',
+              }}
+            />
+
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              aria-label="Datum bis"
+              style={{
+                padding: '0.45rem 0.65rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '0.5rem',
+                font: 'inherit',
+                minHeight: '2.1rem',
+                background: '#ffffff',
+                minWidth: 0,
+                boxSizing: 'border-box',
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={() => {
+                setDateFrom('')
+                setDateTo('')
+              }}
+              aria-label="Datumsfilter löschen"
+              title="Datumsfilter löschen"
+              style={{
+                border: 'none',
+                background: 'transparent',
+                color: '#6b7280',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1rem',
+                lineHeight: 1,
+                width: '1.75rem',
+                height: '1.75rem',
+                borderRadius: '999px',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      
+    </section>
+  )
+})
 
 export default function PollListPage({ initialFilter = '' }: PollListPageProps) {
   const navigate = useNavigate()
@@ -285,12 +665,85 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [selectedShareGroupIds, setSelectedShareGroupIds] = useState<string[]>([])
   const [loadingGroups, setLoadingGroups] = useState(false)
 
+  const [pollSummaries, setPollSummaries] = useState<Record<string, PollSummary>>({})
+  const [loadingSummaries, setLoadingSummaries] = useState<Record<string, boolean>>({})
+
+
+  async function loadSummary(poll: Poll) {
+    setLoadingSummaries((prev) => ({ ...prev, [poll.id]: true }))
+
+    try {
+      const response = await fetch(`${API_BASE}/polls/${poll.id}/summary`, {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error(`Summary konnte nicht geladen werden: ${response.status}`)
+      }
+
+      const apiSummary = await response.json()
+
+      const summary: PollSummary = {
+        options: apiSummary.options.map((option: any) => ({
+          id: String(option.id),
+          formattedDate: formatOptionDate(option),
+          yesCount: Number(option.voteSummary?.yes ?? 0),
+          noCount: Number(option.voteSummary?.no ?? 0),
+          maybeCount: Number(option.voteSummary?.maybe ?? 0),
+          missingCount: Number(option.voteSummary?.missing ?? 0),
+          currentUser: option.voteSummary?.currentUser ?? null,
+          timestamp: option.timestamp ?? null,
+        })),
+      }
+
+      setPollSummaries((prev) => ({
+        ...prev,
+        [poll.id]: summary,
+      }))
+    } catch (err) {
+      console.error('Summary konnte nicht geladen werden', poll.id, err)
+    } finally {
+      setLoadingSummaries((prev) => ({ ...prev, [poll.id]: false }))
+    }
+  }
+
+
   useEffect(() => {
-    async function load() {
+    async function loadCurrentUser() {
       try {
-        const [userData, pollData] = await Promise.all([fetchMe(), fetchPolls()])
+        const userData = await fetchMe()
         setCurrentUser(userData)
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Unbekannter Fehler'
+
+        if (message.includes('401')) {
+          navigate('/login')
+          return
+        }
+
+        setError(message)
+      }
+    }
+
+    async function loadPolls() {
+      try {
+        const pollData = await fetchPolls()
         setPolls(pollData)
+
+        const MAX_PARALLEL_SUMMARIES = 3
+
+        async function loadSummariesInBatches(pollsToLoad: Poll[]) {
+          for (let i = 0; i < pollsToLoad.length; i += MAX_PARALLEL_SUMMARIES) {
+            const batch = pollsToLoad.slice(i, i + MAX_PARALLEL_SUMMARIES)
+
+            await Promise.all(
+              batch.map((poll) => loadSummary(poll)),
+            )
+          }
+        }
+
+        void loadSummariesInBatches(pollData)
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Unbekannter Fehler'
@@ -306,7 +759,8 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       }
     }
 
-    void load()
+    void loadCurrentUser()
+    void loadPolls()
   }, [navigate])
 
   const listScrollRef = useRef<HTMLElement | null>(null)
@@ -385,24 +839,46 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
   const renderedPolls = useMemo(() => {
     return filteredPolls.map((poll) => {
-      const style = getPollStyle(poll)
-      const closed = isPollClosed(poll)
-      const needsResponse = needsCurrentUserResponse(poll)
-      const futureOptions = hasFutureOptions(poll)
-      const closedDate = closed ? formatClosedDate(poll) : ''
+      const summary = pollSummaries[poll.id]
+
+      const summaryOptions =
+        summary?.options.map((option) => ({
+          id: option.id,
+          label: option.formattedDate,
+          timestamp: option.timestamp ?? undefined,
+          confirmed: 0,
+          voteSummary: {
+            yes: option.yesCount,
+            no: option.noCount,
+            maybe: option.maybeCount,
+            count: option.yesCount + option.noCount + option.maybeCount,
+            missing: option.missingCount,
+            currentUser: option.currentUser ?? null,
+          },
+        })) ?? []
+
+      const pollForUi = {
+        ...poll,
+        options: summaryOptions.length > 0 ? summaryOptions : poll.options,
+      }
+
+      const style = getPollStyle(pollForUi)
+      const closed = isPollClosed(pollForUi)
+      const needsResponse = needsCurrentUserResponse(pollForUi)
+      const futureOptions = hasFutureOptions(pollForUi)
+      const closedDate = closed ? formatClosedDate(pollForUi) : ''
       const createdDate = poll.created ? formatCreatedDate(poll.created) : ''
 
       const preparedOptions =
-        poll.options.length > 0
-          ? poll.options.map((option) => ({
-              ...option,
-              formattedDate: formatOptionDate(option),
-              yesCount: voteCount(option, 'yes'),
-              noCount: voteCount(option, 'no'),
-              maybeCount: voteCount(option, 'maybe'),
-              missingCount: missingCount(option),
-            }))
-          : []
+        summary?.options ??
+        poll.options.map((option) => ({
+          ...option,
+          formattedDate: formatOptionDate(option),
+          yesCount: voteCount(option, 'yes'),
+          noCount: voteCount(option, 'no'),
+          maybeCount: voteCount(option, 'maybe'),
+          missingCount: missingCount(option),
+        }))
 
       return {
         ...poll,
@@ -417,7 +893,31 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         },
       }
     })
-  }, [filteredPolls])
+    .sort((a, b) => {
+      // 1. Priorität: offene Stimme
+      const aNeeds = !a._ui.closed && a._ui.needsResponse
+      const bNeeds = !b._ui.closed && b._ui.needsResponse
+
+      if (aNeeds !== bNeeds) {
+        return aNeeds ? -1 : 1
+      }
+
+      // 2. Priorität: neueste Option (max timestamp)
+      const getLatestTimestamp = (poll: typeof a) => {
+        const options = poll._ui.options ?? []
+        if (options.length === 0) return 0
+
+        return Math.max(
+          ...options.map((opt: any) => Number(opt.timestamp ?? 0))
+        )
+      }
+
+      const aTime = getLatestTimestamp(a)
+      const bTime = getLatestTimestamp(b)
+
+      return bTime - aTime // neueste zuerst
+    })
+}, [filteredPolls, pollSummaries])
 
   const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
@@ -591,326 +1091,31 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             transform: translateX(-120%);
           }
         }
+         @keyframes pollbee-skeleton {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        } 
       `}
     </style>
-      <section
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 20,
-          background: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          padding: '0.25rem 0.25rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.65rem',
-            marginBottom: '0.5rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              minWidth: 0,
-              flex: 1,
-            }}
-          >
-            <div
-              style={{
-                position: 'relative', // wichtig für Dropdown
-                flexShrink: 0,
-              }}
-            >
-              <div
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setMenuOpen((prev) => !prev)
-                }}
-                style={{
-                  width: '2.75rem',
-                  height: '2.75rem',
-                  borderRadius: '999px',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                  background: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 700,
-                  color: '#374151',
-                  cursor: 'pointer',
-                }}
-              >
-                {currentUser?.avatarUrl ? (
-                  <img
-                    src={currentUser.avatarUrl}
-                    alt={currentUser.displayName}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
-                  />
-                ) : (
-                  <span>
-                    {currentUser?.displayName?.slice(0, 1).toUpperCase() ?? '?'}
-                  </span>
-                )}
-              </div>
-
-               {menuOpen && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                      position: 'absolute',
-                      top: '3.2rem',
-                      left: 0,
-                      background: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.75rem',
-                      boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
-                      minWidth: '180px',
-                      zIndex: 1000,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: '0.7rem 0.9rem',
-                        fontSize: '0.9rem',
-                        color: '#374151',
-                        borderBottom: '1px solid #f1f5f9',
-                        background: '#ffffff',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {currentUser?.displayName}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                      <IconButton
-                          onClick={handleLogout}
-                          title="Abmelden"
-                          icon={<LogOut size={20} />}
-                        />
-                      <IconButton
-                          onClick={() => setShowInfoScreen(true)}
-                          title="Info"
-                          icon={<span style={{ fontWeight: 700, fontSize: '1.05rem' }}>?</span>}
-                        />
-                    </div>
-
-                    
-                </div>
-              )}
-            </div>
-
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  lineHeight: 1.2,
-                }}
-              >
-                {getGreeting()}
-                {currentUser?.displayName ? `, ${currentUser.displayName}` : ''}
-              </div>
-
-              <div
-                style={{
-                  marginTop: '0.15rem',
-                  fontSize: '0.85rem',
-                  color: '#6b7280',
-                  lineHeight: 1.2,
-                }}
-              >
-                PollBee - <strong>{openPollCount}</strong>{' '}
-                {openPollCount === 1 ? 'offene Umfrage' : 'offene Umfragen'}
-              </div>
-              
-            </div>
-          </div>
-
-		<div
-		  style={{
-		    display: 'flex',
-		    alignItems: 'center',
-		    justifyContent: 'center',
-		    flexShrink: 0,
-		    minWidth: '4.5rem',
-		    background: '#f3f4f6',
-		    borderRadius: '0.5rem',
-		    padding: '0.35rem 0.5rem',
-		  }}
-		>
-		  <img
-        src={`${BASE_PATH}branding/logo-ntso.svg`}
-        alt="NTSO"
-        style={{
-          maxHeight: '2rem',
-          maxWidth: '5rem',
-          display: 'block',
-          objectFit: 'contain',
-        }}
+      <PollListSticky
+        currentUser={currentUser}
+        openPollCount={openPollCount}
+        textFilter={textFilter}
+        setTextFilter={setTextFilter}
+        dateFrom={dateFrom}
+        setDateFrom={setDateFrom}
+        dateTo={dateTo}
+        setDateTo={setDateTo}
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+        handleLogout={handleLogout}
+        setShowInfoScreen={setShowInfoScreen}
+        basePath={BASE_PATH}
       />
-		</div>
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.75rem',
-          }}
-        >
-  
-        <label
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.35rem',
-          }}
-        >
-          <div style={{ position: 'relative' }}>
-            <input
-              type="text"
-              value={textFilter}
-              onChange={(e) => setTextFilter(e.target.value)}
-              placeholder="Titel oder Beschreibung filtern"
-              style={{
-                padding: '0.55rem 2rem 0.55rem 0.7rem', // rechts Platz für X
-                border: '1px solid #d1d5db',
-                borderRadius: '0.55rem',
-                font: 'inherit',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
-            />
-
-            {textFilter && (
-              <button
-                type="button"
-                onClick={() => setTextFilter('')}
-                aria-label="Filter löschen"
-                style={{
-                  position: 'absolute',
-                  right: '0.45rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#6b7280',
-                  fontSize: '0.9rem',
-                  lineHeight: 1,
-                  padding: '0.2rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '999px',
-                }}
-              >
-                ✕
-              </button>
-            )}
-          </div>
-        </label>
-           <div
-            style={{
-              borderTop: '1px solid #e5e7eb',
-              padding: '0.45rem 0.75rem',
-              display: 'grid',
-              gridTemplateColumns: 'auto 1fr 1fr auto',
-              gap: '0.5rem',
-              alignItems: 'center',
-              background: '#ffffff',
-            }}
-          >
-            <div
-              aria-hidden="true"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.95rem',
-                color: '#4b5563',
-                width: '1.5rem',
-              }}
-            >
-              📅
-            </div>
-
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              aria-label="Datum von"
-              style={{
-                padding: '0.45rem 0.65rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.5rem',
-                font: 'inherit',
-                minHeight: '2.1rem',
-                background: '#ffffff',
-                minWidth: 0,
-                boxSizing: 'border-box',
-              }}
-            />
-
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              aria-label="Datum bis"
-              style={{
-                padding: '0.45rem 0.65rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '0.5rem',
-                font: 'inherit',
-                minHeight: '2.1rem',
-                background: '#ffffff',
-                minWidth: 0,
-                boxSizing: 'border-box',
-              }}
-            />
-
-            <button
-              type="button"
-              onClick={() => {
-                setDateFrom('')
-                setDateTo('')
-              }}
-              aria-label="Datumsfilter löschen"
-              title="Datumsfilter löschen"
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: '#6b7280',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1rem',
-                lineHeight: 1,
-                width: '1.75rem',
-                height: '1.75rem',
-                borderRadius: '999px',
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      </section>
 
       <section
       ref={listScrollRef}
@@ -966,207 +1171,231 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             gap: '0.5rem',
           }}
         >
-          {renderedPolls.map((poll) => (
-	<article
-	  key={poll.id}
-	  style={{
-	    position: 'relative',
-	    border: `1px solid ${poll._ui.style.border}`,
-	    borderRadius: '0.8rem',
-	    padding: '0.5rem',
-	    background: poll._ui.style.background,
-	    color: poll._ui.style.color,
-	    transition: 'background 0.2s ease, border 0.2s ease',
-	  }}
-	>
-	{/* 🔶 Offen-Badge */}
-	  {!poll._ui.closed && poll._ui.needsResponse ? (
-		  <div
-		    style={{
-		      position: 'absolute',
-		      top: '0.6rem',
-		      right: '0.6rem',
-		      width: '0.6rem',
-		      height: '0.6rem',
-		      borderRadius: '999px',
-		      background: '#f59e0b',
-		      boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(245,158,11,0.2)',
-		    }}
-		  />
-		) : null}
+          {renderedPolls.map((poll) => {
+              const summary = pollSummaries[poll.id]
+              const isSummaryLoading = loadingSummaries[poll.id]
+              
+              const isReady = Boolean(summary) || poll.options.length > 0
 
-	  {/* 🔒 Geschlossen-Badge */}
-			{poll._ui.closed && poll._ui.futureOptions ? (
-			  <div
-			    style={{
-			      position: 'absolute',
-			      top: '0.6rem',
-			      right: '0.6rem',
-			      background: '#e5e7eb',
-			      color: '#374151',
-			      fontSize: '0.72rem',
-			      fontWeight: 600,
-			      lineHeight: 1,
-			      padding: '0.35rem 0.55rem',
-			      borderRadius: '999px',
-			      boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-			      display: 'flex',
-			      alignItems: 'center',
-			      gap: '0.25rem',
-			    }}
-			  >
-			    <span>🔒{poll._ui.closedDate}</span>
-			   
-			  </div>
-			) : null}
-              <Link
-                to={`/polls/${poll.id}`}
-                style={{
-                  display: 'block',
-                  color: 'inherit',
-                  textDecoration: 'none',
-                }}
-              >
-                <div style={{ marginBottom: '0.45rem' }}>
+          return (
+            <article
+              key={poll.id}
+              style={{
+                position: 'relative',
+                border: `1px solid ${poll._ui.style.border}`,
+                borderRadius: '0.8rem',
+                padding: '0.5rem',
+                background: poll._ui.style.background,
+                color: poll._ui.style.color,
+                transition: 'background 0.2s ease, border 0.2s ease',
+              }}
+            >
+              {/* 🔶 Offen-Badge */}
+                {!poll._ui.closed && poll._ui.needsResponse ? (
                   <div
                     style={{
-                      fontSize: '1.15rem',
-                      fontWeight: 700,
-                      lineHeight: 1.3,
-                      marginBottom: '0.35rem',
+                      position: 'absolute',
+                      top: '0.6rem',
+                      right: '0.6rem',
+                      width: '0.6rem',
+                      height: '0.6rem',
+                      borderRadius: '999px',
+                      background: '#f59e0b',
+                      boxShadow: '0 0 0 2px #ffffff, 0 0 0 4px rgba(245,158,11,0.2)',
+                    }}
+                  />
+                ) : null}
+
+              {/* 🔒 Geschlossen-Badge */}
+                {poll._ui.closed && poll._ui.futureOptions ? (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '0.6rem',
+                      right: '0.6rem',
+                      background: '#e5e7eb',
+                      color: '#374151',
+                      fontSize: '0.72rem',
+                      fontWeight: 600,
+                      lineHeight: 1,
+                      padding: '0.35rem 0.55rem',
+                      borderRadius: '999px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem',
                     }}
                   >
-                    {poll.title}
+                    <span>🔒{poll._ui.closedDate}</span>
+                  
                   </div>
-                  <div
-			  style={{
-			    fontSize: '0.78rem',
-			    color: '#6b7280',
-			    fontStyle: 'italic',
-			    marginTop: '0.15rem',
-			    marginBottom: '0.2rem',
-			  }}
-			>
-			  {poll.owner ? `von ${poll.owner}` : ''}
-			  {poll.created ? ` · ${poll._ui.createdDate}` : ''}
-       
-		  </div>
+                ) : null}
+               <Link
+                  to={isReady ? `/polls/${poll.id}` : '#'}
+                  onClick={(event) => {
+                    if (!isReady) {
+                      event.preventDefault()
+                    }
+                  }}
+                  style={{
+                    display: 'block',
+                    color: 'inherit',
+                    textDecoration: 'none',
+                    opacity: isReady ? 1 : 0.75,
+                  }}
+>
+                  <div style={{ marginBottom: '0.45rem' }}>
+                    <div
+                      style={{
+                        fontSize: '1.15rem',
+                        fontWeight: 700,
+                        lineHeight: 1.3,
+                        marginBottom: '0.35rem',
+                      }}
+                    >
+                      {poll.title}
+                    </div>
+                    <div
+          style={{
+            fontSize: '0.78rem',
+            color: '#6b7280',
+            fontStyle: 'italic',
+            marginTop: '0.15rem',
+            marginBottom: '0.2rem',
+          }}
+        >
+          {poll.owner ? `von ${poll.owner}` : ''}
+          {poll.created ? ` · ${poll._ui.createdDate}` : ''}
+        
+        </div>
 
-                  <div
-                    style={{
-                      fontSize: '0.92rem',
-                      color: '#4b5563',
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {poll.description}
+                    <div
+                      style={{
+                        fontSize: '0.92rem',
+                        color: '#4b5563',
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {poll.description}
+                    </div>
                   </div>
-                </div>
 
-                <div style={{ overflowX: 'auto' }}>
-                  <table
-                    style={{
-                      width: '100%',
-                      borderCollapse: 'collapse',
-                      fontSize: '0.95rem',
-                    }}
-                  >
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
-                        <th
-                          style={{
-                            textAlign: 'left',
-                            padding: '0.55rem 0.4rem 0.55rem 0',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Datum
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="✅" label="Ja" />
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="❌" label="Nein" />
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="❔" label="Vielleicht" />
-                        </th>
-                        <th
-                          style={{
-                            textAlign: 'center',
-                            padding: '0.55rem 0.4rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <HeaderIcon symbol="⏳" label="Fehlt" />
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {poll.options.length > 0 ? (
-                        poll._ui.options.map((option) => (
-                          <tr
-                            key={option.id}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table
+                      style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: '0.95rem',
+                      }}
+                    >
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #e5e7eb' }}>
+                          <th
                             style={{
-                              borderBottom: '1px solid #f0f2f5',
+                              textAlign: 'left',
+                              padding: '0.55rem 0.4rem 0.55rem 0',
+                              fontWeight: 600,
                             }}
                           >
-                            <td style={{ padding: '0.55rem 0.4rem 0.55rem 0' }}>
-                              {option.formattedDate}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.yesCount}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.noCount}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.maybeCount}
-                            </td>
-                            <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
-                              {option.missingCount}
+                            Datum
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="✅" label="Ja" />
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="❌" label="Nein" />
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="❔" label="Vielleicht" />
+                          </th>
+                          <th
+                            style={{
+                              textAlign: 'center',
+                              padding: '0.55rem 0.4rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            <HeaderIcon symbol="⏳" label="Fehlt" />
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                          {isSummaryLoading && !summary ? (
+                            <>
+                              {[1, 2, 3].map((row) => (
+                                <tr key={row} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                  {[1, 2, 3, 4, 5].map((cell) => (
+                                    <td key={cell} style={{ padding: '0.55rem 0.4rem' }}>
+                                      <div
+                                        style={{
+                                          height: cell === 1 ? '0.9rem' : '1rem',
+                                          width: cell === 1 ? '5.5rem' : '2rem',
+                                          margin: cell === 1 ? '0' : '0 auto',
+                                          borderRadius: '999px',
+                                          background:
+                                            'linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 45%, #e5e7eb 90%)',
+                                          backgroundSize: '200% 100%',
+                                          animation: 'pollbee-skeleton 1.2s ease-in-out infinite',
+                                        }}
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </>
+                          ) : summary ? (
+                          summary.options.map((option) => (
+                            <tr key={option.id} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                              <td style={{ padding: '0.55rem 0.4rem 0.55rem 0' }}>
+                                {option.formattedDate}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.yesCount}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.noCount}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.maybeCount}
+                              </td>
+                              <td style={{ textAlign: 'center', padding: '0.4rem 0.35rem' }}>
+                                {option.missingCount}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={5} style={{ padding: '0.75rem 0', color: '#6b7280', fontStyle: 'italic' }}>
+                              Keine Daten verfügbar.
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan={5}
-                            style={{
-                              padding: '0.75rem 0',
-                              color: '#6b7280',
-                              fontStyle: 'italic',
-                            }}
-                          >
-                            Keine Optionen vorhanden.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </Link>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Link>
             </article>
-          ))}
+             )
+        })}
         </div>
 
         <div

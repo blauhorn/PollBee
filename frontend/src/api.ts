@@ -603,4 +603,35 @@ export async function fetchShareGroups(): Promise<GroupOption[]> {
   return data.groups ?? []
 }
 
+export async function updatePollText(
+  pollId: string,
+  payload: { title: string; description: string },
+): Promise<{ poll: PollDetail }> {
+  const response = await fetch(`${API_BASE}/polls/${pollId}/text`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    throw new Error(await response.text())
+  }
+
+  return response.json()
+}
+
+export async function deletePoll(pollId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/polls/${pollId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new Error(await response.text())
+  }
+}
+
 let cachedRequestToken: string | null = null

@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus, MoreVertical, Pencil } from 'lucide-react'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
 
@@ -18,6 +19,8 @@ import {
   createPollShare,
   setPollShareAdmin,
   removePollShareAdmin,
+  updatePollText,
+  deletePoll,
   type PollDetail,
   type PollOption,
   type PollParticipant,
@@ -242,6 +245,161 @@ function participantToChip(participant: PollParticipant): ParticipantChip {
   }
 }
 
+function PollOwnerActionMenu({
+  canEdit,
+  canDelete,
+  canManageAuthors,
+  onEdit,
+  onDelete,
+  onManageAuthors,
+}: {
+  canEdit: boolean
+  canDelete: boolean
+  canManageAuthors: boolean
+  onEdit: () => void
+  onDelete: () => void
+  onManageAuthors: () => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  function closeAndRun(action: () => void) {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <IconButton
+        onClick={() => setOpen((value) => !value)}
+        title="Weitere Aktionen"
+        icon={<MoreVertical size={20} />}
+      />
+
+      {open
+      ? createPortal(
+          <>
+            <button
+              type="button"
+              aria-label="Menü schließen"
+              onClick={() => setOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1200,
+                border: 0,
+                background: 'transparent',
+              }}
+            />
+
+            <div
+              style={{
+                position: 'fixed',
+                right: '1rem',
+                bottom: 'calc(max(0.85rem, env(safe-area-inset-bottom)) + 4.2rem)',
+                zIndex: 1300,
+                minWidth: '14rem',
+                padding: '0.35rem',
+                borderRadius: '0.85rem',
+                background: '#ffffff',
+                boxShadow: '0 16px 40px rgba(15, 23, 42, 0.22)',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <button
+                type="button"
+                disabled={!canEdit}
+                onClick={() => closeAndRun(onEdit)}
+                style={menuItemStyle}
+              >
+                <Pencil size={18} />
+                Titel & Beschreibung ändern
+              </button>
+
+              <button
+                type="button"
+                disabled={!canManageAuthors}
+                onClick={() => closeAndRun(onManageAuthors)}
+                style={menuItemStyle}
+              >
+                <UserCog size={18} />
+                Autoren verwalten
+              </button>
+
+              <div
+                style={{
+                  height: 1,
+                  background: '#e5e7eb',
+                  margin: '0.3rem',
+                }}
+              />
+
+              <button
+                type="button"
+                disabled={!canDelete}
+                onClick={() => closeAndRun(onDelete)}
+                style={{
+                  ...menuItemStyle,
+                  color: '#b91c1c',
+                }}
+              >
+                <Trash2 size={18} />
+                Umfrage löschen
+              </button>
+            </div>
+          </>,
+          document.body,
+        )
+      : null}
+    </div>
+  )
+}
+
+const menuItemStyle: React.CSSProperties = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.65rem',
+  padding: '0.7rem 0.75rem',
+  border: 0,
+  borderRadius: '0.65rem',
+  background: 'transparent',
+  font: 'inherit',
+  fontSize: '0.92rem',
+  textAlign: 'left',
+  cursor: 'pointer',
+}
+
+const dialogBackdropStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 1400,
+  background: 'rgba(15, 23, 42, 0.45)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '1rem',
+}
+
+const dialogCardStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: '34rem',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  background: '#ffffff',
+  borderRadius: '1rem',
+  padding: '1rem',
+  boxShadow: '0 20px 60px rgba(15, 23, 42, 0.35)',
+}
+
+const dialogInputStyle: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '0.7rem 0.8rem',
+  border: '1px solid #d1d5db',
+  borderRadius: '0.65rem',
+  font: 'inherit',
+}
+
 export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const navigate = useNavigate()
   const pollId = forcedPollId ?? params.pollId ?? ''
@@ -276,6 +434,19 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [selectedNewPollAdmins, setSelectedNewPollAdmins] = useState<UserSearchResult[]>([])
   const [pollAdminConfirm, setPollAdminConfirm] = useState(false)
 
+  
+  const [showEditPollDialog, setShowEditPollDialog] = useState(false)
+  const [editPollTitle, setEditPollTitle] = useState('')
+  const [editPollDescription, setEditPollDescription] = useState('')
+  const [editPollLoading, setEditPollLoading] = useState(false)
+  const [editPollError, setEditPollError] = useState('')
+
+  const [showDeletePollDialog, setShowDeletePollDialog] = useState(false)
+  const [deletePollLoading, setDeletePollLoading] = useState(false)
+  const [deletePollConfirmTitle, setDeletePollConfirmTitle] = useState('')
+  const [deletePollError, setDeletePollError] = useState('')
+
+
   const [showCalendarDialog, setShowCalendarDialog] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(false)
   const [calendarSaving, setCalendarSaving] = useState(false)
@@ -291,6 +462,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [calendarEndTime, setCalendarEndTime] = useState('22:00')
   const [calendarOptionSelections, setCalendarOptionSelections] = useState<
     Record<string, { selected: boolean; entryStatus: 'inquiry' | 'fixed' | 'canceled' }>
+
 > ({})
 
   
@@ -615,6 +787,101 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   function closeCalendarDialog() {
     if (calendarSaving) return
     setShowCalendarDialog(false)
+  }
+
+  function openEditPollDialog() {
+      if (!poll) return
+
+      setEditPollTitle(poll.title || '')
+      setEditPollDescription(poll.description || '')
+      setEditPollError('')
+      setShowEditPollDialog(true)
+  }
+
+  function closeEditPollDialog() {
+    if (editPollLoading) return
+    setShowEditPollDialog(false)
+  }
+
+  async function handleUpdatePollText() {
+    if (!poll || editPollLoading) return
+
+    const title = editPollTitle.trim()
+    const description = editPollDescription.trim()
+
+    if (!title) {
+      setEditPollError('Bitte einen Titel eingeben.')
+      return
+    }
+
+    setEditPollLoading(true)
+    setEditPollError('')
+
+    try {
+      await updatePollText(poll.id, {
+        title,
+        description,
+      })
+
+      await loadPollDetail()
+
+      setShowEditPollDialog(false)
+      showSuccess('Umfrage wurde aktualisiert.')
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Umfrage konnte nicht aktualisiert werden.'
+
+      setEditPollError(message)
+      showError(message)
+    } finally {
+      setEditPollLoading(false)
+    }
+  }
+
+  function openDeletePollDialog() {
+    if (!poll) return
+
+    setDeletePollConfirmTitle('')
+    setDeletePollError('')
+    setShowDeletePollDialog(true)
+  }
+
+  function closeDeletePollDialog() {
+    if (deletePollLoading) return
+    setShowDeletePollDialog(false)
+  }
+
+  async function handleDeletePoll() {
+    if (!poll || deletePollLoading) return
+
+    if (deletePollConfirmTitle.trim() !== poll.title.trim()) {
+      setDeletePollError('Bitte den Umfragetitel exakt eingeben.')
+      return
+    }
+
+    setDeletePollLoading(true)
+    setDeletePollError('')
+
+    try {
+      await deletePoll(poll.id)
+      showSuccess('Umfrage wurde gelöscht.')
+      navigate('/polls', {
+        replace: true,
+        state: { message: 'Die Umfrage wurde gelöscht.' },
+      })
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Umfrage konnte nicht gelöscht werden.'
+
+      setDeletePollError(message)
+      showError(message)
+    } finally {
+      setDeletePollLoading(false)
+    }
   }
 
   async function handleCreateCalendarEntries() {
@@ -1643,16 +1910,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           }
         />
 
-        <IconButton
-          onClick={openAuthorDialog}
-          disabled={!canManageAuthors}
-          title={
-            canManageAuthors
-              ? 'Autoren verwalten'
-              : 'Nur der Eigentümer kann Autoren verwalten'
-          }
-          icon={<UserCog size={20} />}
-        />
+
 
         <IconButton
           onClick={openCalendarDialog}
@@ -1671,6 +1929,15 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           title="Stimme speichern"
           icon={<Check size={20} />}
           variant="primary"
+        />
+
+        <PollOwnerActionMenu
+          canEdit={canManageAuthors}
+          canDelete={canManageAuthors}
+          canManageAuthors={canManageAuthors}
+          onEdit={openEditPollDialog}
+          onDelete={openDeletePollDialog}
+          onManageAuthors={openAuthorDialog}
         />
       </div>
     </div>
@@ -2420,6 +2687,131 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
               />              
 
             </div>
+          </div>
+        </div>
+      </div>
+    ) : null}
+
+        {showEditPollDialog ? (
+      <div style={dialogBackdropStyle}>
+        <div style={dialogCardStyle}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem' }}>
+            Titel & Beschreibung ändern
+          </div>
+
+          <label style={{ display: 'block', marginBottom: '0.8rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.35rem' }}>Titel</div>
+            <input
+              type="text"
+              value={editPollTitle}
+              onChange={(e) => setEditPollTitle(e.target.value)}
+              style={dialogInputStyle}
+            />
+          </label>
+
+          <label style={{ display: 'block', marginBottom: '0.8rem' }}>
+            <div style={{ fontWeight: 600, marginBottom: '0.35rem' }}>
+              Beschreibung
+            </div>
+            <textarea
+              value={editPollDescription}
+              onChange={(e) => setEditPollDescription(e.target.value)}
+              rows={5}
+              style={{
+                ...dialogInputStyle,
+                resize: 'vertical',
+              }}
+            />
+          </label>
+
+          {editPollError ? (
+            <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '0.8rem' }}>
+              {editPollError}
+            </div>
+          ) : null}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.6rem' }}>
+            <IconButton
+              onClick={closeEditPollDialog}
+              disabled={editPollLoading}
+              title="Abbrechen"
+              icon={<X size={18} />}
+            />
+            <IconButton
+              onClick={handleUpdatePollText}
+              disabled={editPollLoading}
+              title="Speichern"
+              icon={<Check size={18} />}
+              variant="primary"
+            />
+          </div>
+        </div>
+      </div>
+    ) : null}
+
+    {showDeletePollDialog ? (
+      <div style={dialogBackdropStyle}>
+        <div style={dialogCardStyle}>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem' }}>
+            Umfrage löschen
+          </div>
+
+          <p style={{ color: '#4b5563', lineHeight: 1.45 }}>
+            Diese Aktion kann nicht rückgängig gemacht werden. Bitte gib zur
+            Bestätigung den Titel der Umfrage ein:
+          </p>
+
+          <div
+            style={{
+              fontWeight: 700,
+              padding: '0.65rem',
+              borderRadius: '0.65rem',
+              background: '#fef2f2',
+              color: '#991b1b',
+              marginBottom: '0.8rem',
+            }}
+          >
+            {poll?.title}
+          </div>
+
+          <input
+            type="text"
+            value={deletePollConfirmTitle}
+            onChange={(e) => setDeletePollConfirmTitle(e.target.value)}
+            placeholder="Titel exakt eingeben"
+            style={dialogInputStyle}
+          />
+
+          {deletePollError ? (
+            <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginTop: '0.8rem' }}>
+              {deletePollError}
+            </div>
+          ) : null}
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '0.6rem',
+              marginTop: '1rem',
+            }}
+          >
+            <IconButton
+              onClick={closeDeletePollDialog}
+              disabled={deletePollLoading}
+              title="Abbrechen"
+              icon={<X size={18} />}
+            />
+            <IconButton
+              onClick={handleDeletePoll}
+              disabled={
+                deletePollLoading ||
+                deletePollConfirmTitle.trim() !== poll?.title.trim()
+              }
+              title="Umfrage löschen"
+              icon={<Trash2 size={18} />}
+              variant="danger"
+            />
           </div>
         </div>
       </div>

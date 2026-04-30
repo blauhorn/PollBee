@@ -751,6 +751,7 @@ class NextcloudClient:
             "pollId": poll_id,
             "failedGroupShares": failed_group_shares,
         }
+    
     def update_poll_description(
         self,
         *,
@@ -798,6 +799,23 @@ class NextcloudClient:
         if response.status_code not in (200, 201):
             raise NextcloudApiError(
                 f"Update poll failed: {response.status_code} {response.text}"
+            )
+
+    def delete_poll(self, poll_id: str) -> None:
+        response = self._request(
+            "DELETE",
+            f"/apps/polls/poll/{poll_id}",
+            headers={
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "NC-Polls-Client-Id": "pollbee",
+                "NC-Polls-Client-Time-Zone": "Europe/Berlin",
+            },
+        )
+
+        if response.status_code not in (200, 202, 204):
+            raise NextcloudApiError(
+                f"Delete poll failed: {response.status_code} {response.text}"
             )
 
     @staticmethod
@@ -939,3 +957,10 @@ class NextcloudClient:
             raise NextcloudApiError(
                 f"Delete share failed with status {response.status_code}: {response.text[:500]}"
             ) from exc
+        
+  
+        return self._request(
+            "PUT",
+            f"/apps/polls/poll/{poll_id}",
+            json=payload,
+        )
