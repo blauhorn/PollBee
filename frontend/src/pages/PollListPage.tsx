@@ -837,25 +837,45 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const renderedPolls = useMemo(() => {
     return filteredPolls.map((poll) => {
       const summary = pollSummaries[poll.id]
-      const isLoading = loadingSummaries[poll.id]
-      const style = getPollStyle(poll)
-      const closed = isPollClosed(poll)
-      const needsResponse = needsCurrentUserResponse(poll)
-      const futureOptions = hasFutureOptions(poll)
-      const closedDate = closed ? formatClosedDate(poll) : ''
+
+      const summaryOptions =
+        summary?.options.map((option) => ({
+          id: option.id,
+          label: option.formattedDate,
+          timestamp: undefined,
+          confirmed: 0,
+          voteSummary: {
+            yes: option.yesCount,
+            no: option.noCount,
+            maybe: option.maybeCount,
+            count: option.yesCount + option.noCount + option.maybeCount,
+            missing: option.missingCount,
+            currentUser: null,
+          },
+        })) ?? []
+
+      const pollForUi = {
+        ...poll,
+        options: summaryOptions.length > 0 ? summaryOptions : poll.options,
+      }
+
+      const style = getPollStyle(pollForUi)
+      const closed = isPollClosed(pollForUi)
+      const needsResponse = needsCurrentUserResponse(pollForUi)
+      const futureOptions = hasFutureOptions(pollForUi)
+      const closedDate = closed ? formatClosedDate(pollForUi) : ''
       const createdDate = poll.created ? formatCreatedDate(poll.created) : ''
 
       const preparedOptions =
-        poll.options.length > 0
-          ? poll.options.map((option) => ({
-              ...option,
-              formattedDate: formatOptionDate(option),
-              yesCount: voteCount(option, 'yes'),
-              noCount: voteCount(option, 'no'),
-              maybeCount: voteCount(option, 'maybe'),
-              missingCount: missingCount(option),
-            }))
-          : []
+        summary?.options ??
+        poll.options.map((option) => ({
+          ...option,
+          formattedDate: formatOptionDate(option),
+          yesCount: voteCount(option, 'yes'),
+          noCount: voteCount(option, 'no'),
+          maybeCount: voteCount(option, 'maybe'),
+          missingCount: missingCount(option),
+        }))
 
       return {
         ...poll,
@@ -870,7 +890,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         },
       }
     })
-  }, [filteredPolls])
+  }, [filteredPolls, pollSummaries])
 
   const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
