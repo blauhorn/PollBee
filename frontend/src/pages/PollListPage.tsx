@@ -680,7 +680,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         throw new Error(`Summary konnte nicht geladen werden: ${response.status}`)
       }
 
-      const apisummary = await response.json()
+      const apiSummary = await response.json()
 
       const summary: PollSummary = {
         options: apiSummary.options.map((option: any) => ({
