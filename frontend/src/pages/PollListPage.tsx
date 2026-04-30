@@ -692,6 +692,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
           maybeCount: Number(option.voteSummary?.maybe ?? 0),
           missingCount: Number(option.voteSummary?.missing ?? 0),
           currentUser: option.voteSummary?.currentUser ?? null,
+          timestamp: option.timestamp ?? null,
         })),
       }
 
@@ -844,7 +845,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         summary?.options.map((option) => ({
           id: option.id,
           label: option.formattedDate,
-          timestamp: undefined,
+          timestamp: option.timestamp ?? undefined,
           confirmed: 0,
           voteSummary: {
             yes: option.yesCount,
