@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus, MoreVertical, Pencil } from 'lucide-react'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
@@ -270,22 +271,23 @@ function PollOwnerActionMenu({
         icon={<MoreVertical size={20} />}
       />
 
-      {open ? (
-        <>
-          <button
-            type="button"
-            aria-label="Menü schließen"
-            onClick={() => setOpen(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 1200,
-              border: 0,
-              background: 'transparent',
-            }}
-          />
+      {open
+      ? createPortal(
+          <>
+            <button
+              type="button"
+              aria-label="Menü schließen"
+              onClick={() => setOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1200,
+                border: 0,
+                background: 'transparent',
+              }}
+            />
 
-          <div
+            <div
               style={{
                 position: 'fixed',
                 right: '1rem',
@@ -299,48 +301,50 @@ function PollOwnerActionMenu({
                 border: '1px solid #e5e7eb',
               }}
             >
-            <button
-              type="button"
-              disabled={!canEdit}
-              onClick={() => closeAndRun(onEdit)}
-              style={menuItemStyle}
-            >
-              <Pencil size={18} />
-              Titel & Beschreibung ändern
-            </button>
+              <button
+                type="button"
+                disabled={!canEdit}
+                onClick={() => closeAndRun(onEdit)}
+                style={menuItemStyle}
+              >
+                <Pencil size={18} />
+                Titel & Beschreibung ändern
+              </button>
 
-            <button
-              type="button"
-              onClick={() => closeAndRun(onManageAuthors)}
-              style={menuItemStyle}
-            >
-              <UserCog size={18} />
-              Autoren verwalten
-            </button>
+              <button
+                type="button"
+                onClick={() => closeAndRun(onManageAuthors)}
+                style={menuItemStyle}
+              >
+                <UserCog size={18} />
+                Autoren verwalten
+              </button>
 
-            <div
-              style={{
-                height: 1,
-                background: '#e5e7eb',
-                margin: '0.3rem',
-              }}
-            />
+              <div
+                style={{
+                  height: 1,
+                  background: '#e5e7eb',
+                  margin: '0.3rem',
+                }}
+              />
 
-            <button
-              type="button"
-              disabled={!canDelete}
-              onClick={() => closeAndRun(onDelete)}
-              style={{
-                ...menuItemStyle,
-                color: '#b91c1c',
-              }}
-            >
-              <Trash2 size={18} />
-              Umfrage löschen
-            </button>
-          </div>
-        </>
-      ) : null}
+              <button
+                type="button"
+                disabled={!canDelete}
+                onClick={() => closeAndRun(onDelete)}
+                style={{
+                  ...menuItemStyle,
+                  color: '#b91c1c',
+                }}
+              >
+                <Trash2 size={18} />
+                Umfrage löschen
+              </button>
+            </div>
+          </>,
+          document.body,
+        )
+      : null}
     </div>
   )
 }
