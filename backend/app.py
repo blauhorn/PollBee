@@ -1289,19 +1289,26 @@ def update_poll_text(poll_id: str, payload: PollTextUpdateRequest, request: Requ
         raise HTTPException(status_code=400, detail="Titel darf nicht leer sein.")
 
     try:
-        poll_response = client.update_poll(
-            poll_id,
-            {
-                "title": title,
-                "description": description,
-            },
+        raw_poll_response = client.get_poll(poll_id)
+        raw_poll = raw_poll_response.get("poll", raw_poll_response)
+
+        configuration = raw_poll.get("configuration", {})
+        allow_maybe = bool(configuration.get("allowMaybe", True))
+
+        client.update_poll_description(
+            poll_id=poll_id,
+            title=title,
+            description=description,
+            allow_maybe=allow_maybe,
         )
 
-        poll_data = poll_response.get("poll", poll_response)
+        updated_poll_response = client.get_poll(poll_id)
+        updated_poll = updated_poll_response.get("poll", updated_poll_response)
 
         return {
-            "poll": build_poll_detail(client, poll_data),
+            "poll": updated_poll,
         }
+
     except NextcloudApiError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
