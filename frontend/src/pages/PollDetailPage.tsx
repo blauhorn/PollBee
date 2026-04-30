@@ -248,12 +248,14 @@ function participantToChip(participant: PollParticipant): ParticipantChip {
 function PollOwnerActionMenu({
   canEdit,
   canDelete,
+  canManageAuthors,
   onEdit,
   onDelete,
   onManageAuthors,
 }: {
   canEdit: boolean
   canDelete: boolean
+  canManageAuthors: boolean
   onEdit: () => void
   onDelete: () => void
   onManageAuthors: () => void
@@ -315,6 +317,7 @@ function PollOwnerActionMenu({
 
               <button
                 type="button"
+                disabled={!canManageAuthors}
                 onClick={() => closeAndRun(onManageAuthors)}
                 style={menuItemStyle}
               >
@@ -1931,6 +1934,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
         <PollOwnerActionMenu
           canEdit={canManageAuthors}
           canDelete={canManageAuthors}
+          canManageAuthors={canManageAuthors}
           onEdit={openEditPollDialog}
           onDelete={openDeletePollDialog}
           onManageAuthors={openAuthorDialog}
