@@ -1091,6 +1091,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             transform: translateX(-120%);
           }
         }
+         @keyframes pollbee-skeleton {
+          0% {
+            background-position: 200% 0;
+          }
+          100% {
+            background-position: -200% 0;
+          }
+        } 
       `}
     </style>
       <PollListSticky
@@ -1331,13 +1339,30 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                       </thead>
 
                       <tbody>
-                        {isSummaryLoading && !summary ? (
-                          <tr>
-                            <td colSpan={5} style={{ padding: '0.75rem 0', color: '#6b7280', fontStyle: 'italic' }}>
-                              Lade Zusammenfassung...
-                            </td>
-                          </tr>
-                        ) : summary ? (
+                          {isSummaryLoading && !summary ? (
+                            <>
+                              {[1, 2, 3].map((row) => (
+                                <tr key={row} style={{ borderBottom: '1px solid #f0f2f5' }}>
+                                  {[1, 2, 3, 4, 5].map((cell) => (
+                                    <td key={cell} style={{ padding: '0.55rem 0.4rem' }}>
+                                      <div
+                                        style={{
+                                          height: cell === 1 ? '0.9rem' : '1rem',
+                                          width: cell === 1 ? '5.5rem' : '2rem',
+                                          margin: cell === 1 ? '0' : '0 auto',
+                                          borderRadius: '999px',
+                                          background:
+                                            'linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 45%, #e5e7eb 90%)',
+                                          backgroundSize: '200% 100%',
+                                          animation: 'pollbee-skeleton 1.2s ease-in-out infinite',
+                                        }}
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </>
+                          ) : summary ? (
                           summary.options.map((option) => (
                             <tr key={option.id} style={{ borderBottom: '1px solid #f0f2f5' }}>
                               <td style={{ padding: '0.55rem 0.4rem 0.55rem 0' }}>
