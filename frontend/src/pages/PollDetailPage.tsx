@@ -286,19 +286,19 @@ function PollOwnerActionMenu({
           />
 
           <div
-            style={{
-              position: 'absolute',
-              right: 0,
-              bottom: 'calc(100% + 0.6rem)',
-              zIndex: 1300,
-              minWidth: '14rem',
-              padding: '0.35rem',
-              borderRadius: '0.85rem',
-              background: '#ffffff',
-              boxShadow: '0 16px 40px rgba(15, 23, 42, 0.22)',
-              border: '1px solid #e5e7eb',
-            }}
-          >
+              style={{
+                position: 'fixed',
+                right: '1rem',
+                bottom: 'calc(max(0.85rem, env(safe-area-inset-bottom)) + 4.2rem)',
+                zIndex: 1300,
+                minWidth: '14rem',
+                padding: '0.35rem',
+                borderRadius: '0.85rem',
+                background: '#ffffff',
+                boxShadow: '0 16px 40px rgba(15, 23, 42, 0.22)',
+                border: '1px solid #e5e7eb',
+              }}
+            >
             <button
               type="button"
               disabled={!canEdit}
