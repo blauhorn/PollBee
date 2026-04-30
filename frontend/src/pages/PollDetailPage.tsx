@@ -815,12 +815,13 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     setEditPollError('')
 
     try {
-      const result = await updatePollText(poll.id, {
+      await updatePollText(poll.id, {
         title,
         description,
       })
 
-      setPoll(result.poll)
+      await loadPollDetail()
+
       setShowEditPollDialog(false)
       showSuccess('Umfrage wurde aktualisiert.')
     } catch (error) {
