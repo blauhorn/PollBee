@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus } from 'lucide-react'
+import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus, MoreVertical, Pencil } from 'lucide-react'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
 
@@ -240,6 +240,124 @@ function participantToChip(participant: PollParticipant): ParticipantChip {
     publicComment: participant.publicComment,
     publicCommentTimestamp: participant.publicCommentTimestamp,
   }
+}
+
+function PollOwnerActionMenu({
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+  onManageAuthors,
+}: {
+  canEdit: boolean
+  canDelete: boolean
+  onEdit: () => void
+  onDelete: () => void
+  onManageAuthors: () => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  function closeAndRun(action: () => void) {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <IconButton
+        onClick={() => setOpen((value) => !value)}
+        title="Weitere Aktionen"
+        icon={<MoreVertical size={20} />}
+      />
+
+      {open ? (
+        <>
+          <button
+            type="button"
+            aria-label="Menü schließen"
+            onClick={() => setOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1200,
+              border: 0,
+              background: 'transparent',
+            }}
+          />
+
+          <div
+            style={{
+              position: 'absolute',
+              right: 0,
+              bottom: 'calc(100% + 0.6rem)',
+              zIndex: 1300,
+              minWidth: '14rem',
+              padding: '0.35rem',
+              borderRadius: '0.85rem',
+              background: '#ffffff',
+              boxShadow: '0 16px 40px rgba(15, 23, 42, 0.22)',
+              border: '1px solid #e5e7eb',
+            }}
+          >
+            <button
+              type="button"
+              disabled={!canEdit}
+              onClick={() => closeAndRun(onEdit)}
+              style={menuItemStyle}
+            >
+              <Pencil size={18} />
+              Titel & Beschreibung ändern
+            </button>
+
+            <button
+              type="button"
+              onClick={() => closeAndRun(onManageAuthors)}
+              style={menuItemStyle}
+            >
+              <UserCog size={18} />
+              Autoren verwalten
+            </button>
+
+            <div
+              style={{
+                height: 1,
+                background: '#e5e7eb',
+                margin: '0.3rem',
+              }}
+            />
+
+            <button
+              type="button"
+              disabled={!canDelete}
+              onClick={() => closeAndRun(onDelete)}
+              style={{
+                ...menuItemStyle,
+                color: '#b91c1c',
+              }}
+            >
+              <Trash2 size={18} />
+              Umfrage löschen
+            </button>
+          </div>
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+const menuItemStyle: React.CSSProperties = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.65rem',
+  padding: '0.7rem 0.75rem',
+  border: 0,
+  borderRadius: '0.65rem',
+  background: 'transparent',
+  font: 'inherit',
+  fontSize: '0.92rem',
+  textAlign: 'left',
+  cursor: 'pointer',
 }
 
 export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
@@ -1643,15 +1761,18 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           }
         />
 
-        <IconButton
-          onClick={openAuthorDialog}
-          disabled={!canManageAuthors}
-          title={
-            canManageAuthors
-              ? 'Autoren verwalten'
-              : 'Nur der Eigentümer kann Autoren verwalten'
-          }
-          icon={<UserCog size={20} />}
+        <PollOwnerActionMenu
+          canEdit={canManageAuthors}
+          canDelete={canManageAuthors}
+          onEdit={() => {
+            // später: openEditPollDialog()
+            showError('Bearbeiten ist noch nicht implementiert.')
+          }}
+          onDelete={() => {
+            // später: openDeletePollDialog()
+            showError('Löschen ist noch nicht implementiert.')
+          }}
+          onManageAuthors={openAuthorDialog}
         />
 
         <IconButton
