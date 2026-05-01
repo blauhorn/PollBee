@@ -799,10 +799,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
     }
   }, [showInfoScreen])
 
-  const openPollCount = useMemo(() => {
-    return polls.filter(isPollOpenForCurrentUser).length
-  }, [polls])
-
+ 
   const filteredPolls = useMemo(() => {
     const needle = textFilter.trim().toLowerCase()
 
@@ -918,6 +915,12 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
       return bTime - aTime // neueste zuerst
     })
 }, [filteredPolls, pollSummaries])
+
+  const openPollCount = useMemo(() => {
+    return renderedPolls.filter(
+      (poll) => !poll._ui.closed && poll._ui.needsResponse,
+    ).length
+  }, [renderedPolls])
 
   const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
