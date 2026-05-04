@@ -273,6 +273,7 @@ type PollListStickyProps = {
 const PollListSticky = memo(function PollListSticky({
   currentUser,
   openPollCount,
+  openPollCountPulse,
   textFilter,
   setTextFilter,
   dateFrom,
