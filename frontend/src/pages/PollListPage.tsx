@@ -256,6 +256,7 @@ function DateFilterSummary({
 type PollListStickyProps = {
   currentUser: User | null
   openPollCount: number
+  openPollCountPulse: boolean
   textFilter: string
   setTextFilter: (value: string) => void
   dateFrom: string
@@ -272,6 +273,7 @@ type PollListStickyProps = {
 const PollListSticky = memo(function PollListSticky({
   currentUser,
   openPollCount,
+  openPollCountPulse,
   textFilter,
   setTextFilter,
   dateFrom,
@@ -422,6 +424,9 @@ const PollListSticky = memo(function PollListSticky({
                   fontSize: '0.85rem',
                   color: '#6b7280',
                   lineHeight: 1.2,
+                  animation: openPollCountPulse
+                  ? 'pollbee-count-bump 0.65s ease-out'
+                  : 'none',
                 }}
               >
                 PollBee - <strong>{openPollCount}</strong>{' '}
@@ -667,7 +672,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
   const [pollSummaries, setPollSummaries] = useState<Record<string, PollSummary>>({})
   const [loadingSummaries, setLoadingSummaries] = useState<Record<string, boolean>>({})
-
+  const [openPollCountPulse, setOpenPollCountPulse] = useState(false)
 
   async function loadSummary(poll: Poll) {
     setLoadingSummaries((prev) => ({ ...prev, [poll.id]: true }))
@@ -922,6 +927,24 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
     ).length
   }, [renderedPolls])
 
+  const allSummariesLoaded = useMemo(() => {
+    return renderedPolls.length > 0 && renderedPolls.every(
+      (poll) => !loadingSummaries[poll.id],
+    )
+  }, [renderedPolls, loadingSummaries])
+
+  useEffect(() => {
+    if (!allSummariesLoaded) return
+
+    setOpenPollCountPulse(true)
+
+    const timer = window.setTimeout(() => {
+      setOpenPollCountPulse(false)
+    }, 700)
+
+    return () => window.clearTimeout(timer)
+  }, [allSummariesLoaded, openPollCount])
+
   const BASE_PATH = import.meta.env.VITE_BASE_PATH || '/pollapp/'
 
   async function openCreatePollDialog() {
@@ -1094,7 +1117,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             transform: translateX(-120%);
           }
         }
-         @keyframes pollbee-skeleton {
+        @keyframes pollbee-skeleton {
           0% {
             background-position: 200% 0;
           }
@@ -1102,11 +1125,26 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             background-position: -200% 0;
           }
         } 
+        @keyframes pollbee-count-bump {
+          0% {
+            transform: scale(1);
+          }
+          35% {
+            transform: scale(1.08);
+          }
+          70% {
+            transform: scale(0.98);
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
       `}
     </style>
       <PollListSticky
         currentUser={currentUser}
         openPollCount={openPollCount}
+        openPollCountPulse={openPollCountPulse}
         textFilter={textFilter}
         setTextFilter={setTextFilter}
         dateFrom={dateFrom}
