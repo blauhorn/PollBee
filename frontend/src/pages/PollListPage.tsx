@@ -17,6 +17,7 @@ type PollSummaryOption = {
   maybeCount: number
   missingCount: number
   currentUser?: 'yes' | 'no' | 'maybe' | null
+  timestamp?: number
 }
 
 type PollSummary = {
@@ -772,7 +773,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [showCreateButton, setShowCreateButton] = useState(true)  
 
   useEffect(() => {
-    const el = listScrollRef.current
+    const el = listScrollRef.current!
     if (!el) return
 
     let lastScrollTop = el.scrollTop
@@ -855,7 +856,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             maybe: option.maybeCount,
             count: option.yesCount + option.noCount + option.maybeCount,
             missing: option.missingCount,
-            currentUser: option.currentUser ?? null,
+            currentUser: option.currentUser ?? undefined,
           },
         })) ?? []
 
