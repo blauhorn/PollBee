@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
+import { Plus, X, Trash2, LogOut, Info, Check } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, fetchShareGroups, type Poll, type PollOption, type CreatePollOptionInput, type User, type GroupOption } from '../api'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
@@ -1038,10 +1038,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
     }
 
     const parsedOptions: CreatePollOptionInput[] = []
+    const hasEmptyDateRow = newPollOptions.some((row) => !row.date)
+
+    if (hasEmptyDateRow) {
+      setCreatePollError('Bitte für jeden Termin ein Datum angeben.')
+      return
+    }
 
     for (const row of newPollOptions) {
-      if (!row.date) continue
-
       const dateTimeString = row.time
         ? `${row.date}T${row.time}`
         : `${row.date}T19:30`
@@ -1725,9 +1729,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
                 <IconButton
                   onClick={handleCreatePoll}
-                  disabled={createPollLoading}
+                  disabled={
+                    createPollLoading ||
+                    !newPollTitle.trim() ||
+                    newPollOptions.length === 0 ||
+                    newPollOptions.some((row) => !row.date)
+                  }
                   title="Umfrage erstellen"
-                  icon={<Plus size={18} />}
+                  icon={<Check size={18} />}
                   variant="primary"
                   size={40}
                 />
