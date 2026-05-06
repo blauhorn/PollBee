@@ -1623,7 +1623,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                 <ToggleSwitch
                   checked={newPollAllowMaybe}
                   onChange={(checked) =>
-                    setNewPollAllowMaybe(e.target.checked)
+                    setNewPollAllowMaybe(checked)
                   }
                 />
                 <span>„Vielleicht“ erlauben</span>
