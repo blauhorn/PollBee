@@ -1590,15 +1590,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                   background: '#f9fafb',
                 }}
               >
-                <span>
-                  <strong>{newPollAccess === 'open' ? 'Öffentliche Umfrage' : 'Private Umfrage'}</strong>
-                  <br />
-                  <small style={{ color: '#6b7280' }}>
-                    {newPollAccess === 'open'
-                      ? 'Alle PollBee-Nutzer können diese Umfrage sehen.'
-                      : 'Nur berechtigte Nutzer, Gruppen und Co-Autoren können diese Umfrage sehen.'}
-                  </small>
-                </span>
+   
 
                 <ToggleSwitch
                   checked={newPollAccess === 'open'}
@@ -1606,7 +1598,15 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                     setNewPollAccess(checked ? 'open' : 'private')
                   }
                 />
-
+                <span>
+                  <strong>{newPollAccess === 'open' ? 'Öffentlich' : 'Privat'}</strong>
+                  <br />
+                  <small style={{ color: '#6b7280' }}>
+                    {newPollAccess === 'open'
+                      ? 'Jeder kann diese Umfrage sehen.'
+                      : 'Nur für Autoren und Co-Autoren.'}
+                  </small>
+                </span>
                 
               </label>
 
