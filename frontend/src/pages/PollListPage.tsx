@@ -840,8 +840,23 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
     })
   }, [polls, textFilter, dateFrom, dateTo])
 
+  const visiblePolls = useMemo(() => {
+    return filteredPolls.filter((poll) => {
+      if (poll.access !== 'private') {
+        return true
+      }
+
+      return Boolean(
+        poll.permissions?.isOwner ||
+        poll.permissions?.isPollAdmin ||
+        poll.permissions?.canManagePoll ||
+        poll.permissions?.canManageAuthors
+      )
+    })
+  }, [filteredPolls])
+
   const renderedPolls = useMemo(() => {
-    return filteredPolls.map((poll) => {
+    return visiblePolls.map((poll) => {
       const summary = pollSummaries[poll.id]
 
       const summaryOptions =
@@ -920,7 +935,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
       return bTime - aTime // neueste zuerst
     })
-}, [filteredPolls, pollSummaries])
+}, [visiblePolls, pollSummaries])
 
   const openPollCount = useMemo(() => {
     return renderedPolls.filter(

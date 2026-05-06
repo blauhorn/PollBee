@@ -26,6 +26,16 @@ export type Poll = {
   options: PollOption[]
   owner?: string
   created?: number
+  access?: 'private' | 'open'
+  isPrivate?: boolean
+  isOpen?: boolean
+  permissions?: {
+    isOwner?: boolean
+    isPollAdmin?: boolean
+    canToggleClosed?: boolean
+    canManagePoll?: boolean
+    canManageAuthors?: boolean
+  }
 }
 
 export type PollParticipant = {
