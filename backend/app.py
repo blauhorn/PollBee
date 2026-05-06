@@ -1334,6 +1334,7 @@ def update_poll_text(poll_id: str, payload: PollTextUpdateRequest, request: Requ
             title=title,
             description=description,
             allow_maybe=allow_maybe,
+            access=payload.access,
         )
 
         updated_poll_response = client.get_poll(poll_id)
