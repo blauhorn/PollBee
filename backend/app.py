@@ -80,14 +80,16 @@ class CreatePollPayload(BaseModel):
     options: list[CreatePollOptionPayload]
     allowMaybe: bool = True
     shareGroupIds: list[str] = []
+    access: Literal["private", "open"] = "private"
 
 class CreatePollRequest(BaseModel):
     title: str
     description: str = ""
     allowMaybe: bool = True
-    options: list[CreatePollOptionRequest]
+    options: list[CreatePollOptionPayload]
     shareGroupIds: list[str] = []
     access: Literal["private", "open"] = "private"
+    
 
 class PollTextUpdateRequest(BaseModel):
     title: str
