@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus, MoreVertical, Pencil } from 'lucide-react'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
+import ToggleSwitch from '../components/ToggleSwitch'
 
 import {
   fetchMe,
@@ -2745,24 +2746,28 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
               marginBottom: '0.8rem',
             }}
           >
+            
             <span>
-              <strong>{editPollAccess === 'open' ? 'Öffentliche Umfrage' : 'Private Umfrage'}</strong>
+              <strong>{editPollAccess === 'open' ? 'Öffentlich' : 'Privat'}</strong>
               <br />
               <small style={{ color: '#6b7280' }}>
                 {editPollAccess === 'open'
-                  ? 'Alle PollBee-Nutzer können diese Umfrage sehen.'
-                  : 'Nur berechtigte Nutzer, Gruppen und Co-Autoren können diese Umfrage sehen.'}
+                  ? 'Jeder kann diese Umfrage sehen.'
+                  : 'Nur Autoren und Co-Autoren können diese Umfrage sehen.'}
               </small>
             </span>
 
-            <input
-              type="checkbox"
-              checked={editPollAccess === 'open'}
-              onChange={(event) =>
-                setEditPollAccess(event.target.checked ? 'open' : 'private')
-              }
+
+            <ToggleSwitch
+                checked={editPollAccess === 'open'}
+                onChange={(checked) =>
+                setEditPollAccess(checked ? 'open' : 'private')
+                              }
             />
           </label>
+
+
+          
 
           {editPollError ? (
             <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '0.8rem' }}>
