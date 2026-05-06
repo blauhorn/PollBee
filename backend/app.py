@@ -495,14 +495,15 @@ def build_light_poll_list_item(
     raw_permissions = source_poll.get("permissions") or {}
 
     is_owner = bool(current_user_status.get("isOwner"))
-
-    is_poll_admin = bool(
-        is_owner
-        or raw_permissions.get("edit")
-        or raw_permissions.get("addShares")
-        or raw_permissions.get("changeOwner")
-        or raw_permissions.get("delete")
-    )
+    user_role = str(current_user_status.get("userRole") or "").lower()
+    is_poll_admin = is_owner or user_role in ("admin", "owner")
+    #is_poll_admin = bool(
+    #    is_owner
+    #    or raw_permissions.get("edit")
+    #    or raw_permissions.get("addShares")
+    #    or raw_permissions.get("changeOwner")
+    #    or raw_permissions.get("delete")
+    #)
     return {
         "id": str(raw_poll.get("id")),
         "title": effective_configuration.get("title")
