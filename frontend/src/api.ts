@@ -190,6 +190,7 @@ export type CreatePollPayload = {
   options: CreatePollOptionInput[]
   allowMaybe: boolean
   shareGroupIds: string[]
+  access?: 'private' | 'open'
 }
 
 export type CreatePollResponse = {

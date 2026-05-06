@@ -651,6 +651,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   }
 
   const [showCreatePollDialog, setShowCreatePollDialog] = useState(false)
+  const [newPollAccess, setNewPollAccess] = useState<'private' | 'open'>('private')
   const [createPollLoading, setCreatePollLoading] = useState(false)
   const [createPollError, setCreatePollError] = useState('')
   const [newPollTitle, setNewPollTitle] = useState('')
@@ -992,6 +993,9 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   function closeCreatePollDialog() {
     if (createPollLoading) return
     setShowCreatePollDialog(false)
+    setNewPollTitle('')
+    setNewPollDescription('')
+    setNewPollAccess('private')
   }
 
   function addPollOptionRow() {
@@ -1093,12 +1097,16 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         options: parsedOptions,
         allowMaybe: newPollAllowMaybe,
         shareGroupIds: selectedShareGroupIds,
+        access: newPollAccess,
       })
-
+      showSuccess(`Umfrage „${title}“ wurde erstellt.`)
+      setNewPollTitle('')
+      setNewPollDescription('')
+      setNewPollAccess('private')
       setShowCreatePollDialog(false)
       await fetchPolls().then(setPolls)
 
-      showSuccess(`Umfrage „${title}“ wurde erstellt.`)
+      
     } catch (error) {
       console.error(error)
 
@@ -1566,6 +1574,37 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                     boxSizing: 'border-box',
                     resize: 'vertical',
                   }}
+                />
+              </label>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  padding: '0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.75rem',
+                  background: '#f9fafb',
+                }}
+              >
+                <span>
+                  <strong>{newPollAccess === 'open' ? 'Öffentliche Umfrage' : 'Private Umfrage'}</strong>
+                  <br />
+                  <small style={{ color: '#6b7280' }}>
+                    {newPollAccess === 'open'
+                      ? 'Alle PollBee-Nutzer können diese Umfrage sehen.'
+                      : 'Nur berechtigte Nutzer, Gruppen und Co-Autoren können diese Umfrage sehen.'}
+                  </small>
+                </span>
+
+                <input
+                  type="checkbox"
+                  checked={newPollAccess === 'open'}
+                  onChange={(event) =>
+                    setNewPollAccess(event.target.checked ? 'open' : 'private')
+                  }
                 />
               </label>
 
