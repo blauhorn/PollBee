@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { MessageCircle, Share2, Check, Lock, LockOpen, UserCog, CalendarPlus, X, ArrowLeft, Trash2, Plus, MoreVertical, Pencil } from 'lucide-react'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
+import ToggleSwitch from '../components/ToggleSwitch'
 
 import {
   fetchMe,
@@ -440,6 +441,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   const [editPollDescription, setEditPollDescription] = useState('')
   const [editPollLoading, setEditPollLoading] = useState(false)
   const [editPollError, setEditPollError] = useState('')
+  const [editPollAccess, setEditPollAccess] = useState<'private' | 'open'>('private')
 
   const [showDeletePollDialog, setShowDeletePollDialog] = useState(false)
   const [deletePollLoading, setDeletePollLoading] = useState(false)
@@ -663,23 +665,24 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   }
 
   async function handleOwnerSearch(query: string) {
-  setOwnerSearch(query)
-  setTransferError('')
+    setOwnerSearch(query)
+    setTransferError('')
 
-  if (!query.trim()) {
-    setOwnerSearchResults([])
-    return
-  }
+    if (!query.trim()) {
+      setOwnerSearchResults([])
+      return
+    }
 
-  try {
-    const results = await searchUsers(query.trim())
-    const filtered = results.filter((user) => user.id !== poll.currentUser?.id)
-    setOwnerSearchResults(filtered)
-  } catch (error) {
-    console.error(error)
-    setTransferError('Benutzersuche fehlgeschlagen.')
+    try {
+      const results = await searchUsers(query.trim())
+      const currentUserId = poll?.currentUser?.id
+      const filtered = results.filter((user) => user.id !== currentUserId)
+      setOwnerSearchResults(filtered)
+    } catch (error) {
+      console.error(error)
+      setTransferError('Benutzersuche fehlgeschlagen.')
+    }
   }
-}
 
   async function handleCoAuthorSearch(value: string) {
     setCoAuthorSearch(value)
@@ -744,6 +747,8 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   }
 
   async function openCalendarDialog() {
+    if (!poll) return
+
     setShowCalendarDialog(true)
     setCalendarLoading(true)
     setCalendarSaving(false)
@@ -795,6 +800,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
       setEditPollTitle(poll.title || '')
       setEditPollDescription(poll.description || '')
       setEditPollError('')
+      setEditPollAccess(poll?.access === 'open' ? 'open' : 'private')
       setShowEditPollDialog(true)
   }
 
@@ -806,8 +812,11 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
   async function handleUpdatePollText() {
     if (!poll || editPollLoading) return
 
+    const pollId = poll.id
+
     const title = editPollTitle.trim()
     const description = editPollDescription.trim()
+    const access = editPollAccess
 
     if (!title) {
       setEditPollError('Bitte einen Titel eingeben.')
@@ -818,9 +827,10 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
     setEditPollError('')
 
     try {
-      await updatePollText(poll.id, {
+      await updatePollText(pollId, {
         title,
         description,
+        access,
       })
 
       await loadPollDetail()
@@ -2696,7 +2706,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
       <div style={dialogBackdropStyle}>
         <div style={dialogCardStyle}>
           <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem' }}>
-            Titel & Beschreibung ändern
+            Umfrage bearbeiten
           </div>
 
           <label style={{ display: 'block', marginBottom: '0.8rem' }}>
@@ -2723,6 +2733,41 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
               }}
             />
           </label>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              padding: '0.75rem',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.75rem',
+              background: '#f9fafb',
+              marginBottom: '0.8rem',
+            }}
+          >
+            
+            <span>
+              <strong>{editPollAccess === 'open' ? 'Öffentlich' : 'Privat'}</strong>
+              <br />
+              <small style={{ color: '#6b7280' }}>
+                {editPollAccess === 'open'
+                  ? 'Jeder kann diese Umfrage sehen.'
+                  : 'Nur Autoren und Co-Autoren können diese Umfrage sehen.'}
+              </small>
+            </span>
+
+
+            <ToggleSwitch
+                checked={editPollAccess === 'open'}
+                onChange={(checked) =>
+                setEditPollAccess(checked ? 'open' : 'private')
+                              }
+            />
+          </label>
+
+
+          
 
           {editPollError ? (
             <div style={{ color: '#b91c1c', fontSize: '0.9rem', marginBottom: '0.8rem' }}>

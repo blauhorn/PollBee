@@ -9,7 +9,7 @@ from register_config import REGISTER_GROUPS
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
-from typing import Any
+from typing import Any, Literal
 from fastapi.responses import Response as FastAPIResponse
 from nextcloud_client import (
     NextcloudApiError,
@@ -80,17 +80,21 @@ class CreatePollPayload(BaseModel):
     options: list[CreatePollOptionPayload]
     allowMaybe: bool = True
     shareGroupIds: list[str] = []
+    access: Literal["private", "open"] = "private"
 
 class CreatePollRequest(BaseModel):
     title: str
     description: str = ""
     allowMaybe: bool = True
-    options: list[CreatePollOptionRequest]
+    options: list[CreatePollOptionPayload]
     shareGroupIds: list[str] = []
+    access: Literal["private", "open"] = "private"
+    
 
 class PollTextUpdateRequest(BaseModel):
     title: str
     description: str = ""
+    access: Literal["private", "open"] = "private"
 
 def first_nonempty_str(*values):
     for value in values:
@@ -487,7 +491,23 @@ def build_light_poll_list_item(
         if isinstance((detail_poll_data or raw_poll).get("status"), dict)
         else None
     ) or (detail_poll_data or raw_poll).get("created")
+    access = effective_configuration.get("access") or "private"
 
+    source_poll = detail_poll_data or raw_poll
+
+    current_user_status = source_poll.get("currentUserStatus") or {}
+    raw_permissions = source_poll.get("permissions") or {}
+
+    is_owner = bool(current_user_status.get("isOwner"))
+    user_role = str(current_user_status.get("userRole") or "").lower()
+    is_poll_admin = is_owner or user_role in ("admin", "owner")
+    #is_poll_admin = bool(
+    #    is_owner
+    #    or raw_permissions.get("edit")
+    #    or raw_permissions.get("addShares")
+    #    or raw_permissions.get("changeOwner")
+    #    or raw_permissions.get("delete")
+    #)
     return {
         "id": str(raw_poll.get("id")),
         "title": effective_configuration.get("title")
@@ -500,11 +520,21 @@ def build_light_poll_list_item(
         or "",
         "status": derived_status,
         "isClosed": is_closed,
+        "access": access,
+        "isPrivate": access == "private",
+        "isOpen": access == "open",
         "dueDate": str(due_date) if due_date else "",
         "summaryText": "",
         "options": [],
         "owner": owner.get("displayName") or owner.get("userId") or "",
         "created": created,
+        "permissions": {
+            "isOwner": is_owner,
+            "isPollAdmin": is_poll_admin,
+            "canToggleClosed": is_poll_admin,
+            "canManagePoll": is_poll_admin,
+            "canManageAuthors": is_owner,
+        },
     }
 
 @app.get("/")
@@ -1183,6 +1213,7 @@ def get_poll_by_id(poll_id: str, request: Request):
 
     participants.sort(key=lambda item: (item["displayName"] or "").lower())
     missing_participants.sort(key=lambda item: (item["displayName"] or "").lower())
+    access = configuration.get("access") or "private"
 
     return {
         "id": str(poll_data.get("id", poll_id)),
@@ -1194,6 +1225,9 @@ def get_poll_by_id(poll_id: str, request: Request):
         "dueDate": due_date,
         "summaryText": "",
         "allowMaybe": allow_maybe,
+        "access": access,
+        "isPrivate": access == "private",
+        "isOpen": access == "open",
         "anonymous": anonymous,
         "showResults": configuration.get("showResults"),
         "debugConfiguration": {
@@ -1300,6 +1334,7 @@ def update_poll_text(poll_id: str, payload: PollTextUpdateRequest, request: Requ
             title=title,
             description=description,
             allow_maybe=allow_maybe,
+            access=payload.access,
         )
 
         updated_poll_response = client.get_poll(poll_id)
@@ -1738,6 +1773,7 @@ def create_poll(payload: CreatePollPayload, request: Request):
     description = payload.description.strip()
     options = payload.options
     allow_maybe = payload.allowMaybe
+    access = payload.access
 
     if not title:
         raise HTTPException(status_code=400, detail="Titel fehlt")
@@ -1751,6 +1787,7 @@ def create_poll(payload: CreatePollPayload, request: Request):
             description=description,
             options=options,
             allow_maybe=allow_maybe,
+            access=access,
             share_group_ids=payload.shareGroupIds,
         )
     except NextcloudApiError as exc:

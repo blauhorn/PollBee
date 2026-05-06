@@ -332,6 +332,15 @@ class NextcloudClient:
         return results
 
     def transfer_poll_ownership(self, poll_id: str, new_owner_id: str) -> dict[str, Any]:
+        print(
+            "DEBUG transfer_poll_ownership request:",
+            {
+                "poll_id": poll_id,
+                "new_owner_id": new_owner_id,
+                "current_user": self.username,
+            },
+    )
+    
         response = self._request(
             "PUT",
             f"/apps/polls/poll/{poll_id}/changeowner/{new_owner_id}",
@@ -375,15 +384,15 @@ class NextcloudClient:
         }
 
         body = """<?xml version="1.0" encoding="UTF-8"?>
-<d:propfind xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns/">
-  <d:prop>
-    <d:displayname />
-    <d:resourcetype />
-    <cs:getctag />
-    <oc:calendar-enabled />
-  </d:prop>
-</d:propfind>
-"""
+                    <d:propfind xmlns:d="DAV:" xmlns:cs="http://calendarserver.org/ns/" xmlns:oc="http://owncloud.org/ns/">
+                    <d:prop>
+                        <d:displayname />
+                        <d:resourcetype />
+                        <cs:getctag />
+                        <oc:calendar-enabled />
+                    </d:prop>
+                    </d:propfind>
+                """
 
         response = requests.request(
             method="PROPFIND",
@@ -621,6 +630,7 @@ class NextcloudClient:
         description: str,
         options: list[Any],
         allow_maybe: bool,
+        access: str = "private",
         share_group_ids: list[str] | None = None,
     ) -> dict[str, Any]:
 
@@ -723,13 +733,13 @@ class NextcloudClient:
                     f"Add option failed: {option_response.status_code} {option_response.text}"
                 )
 
-        if description:
-            self.update_poll_description(
-                poll_id=poll_id,
-                title=title,
-                description=description,
-                allow_maybe=allow_maybe,
-            )
+        self.update_poll_description(
+            poll_id=poll_id,
+            title=title,
+            description=description,
+            allow_maybe=allow_maybe,
+            access=access,
+        )
 
         failed_group_shares: list[str] = []
 
@@ -759,6 +769,7 @@ class NextcloudClient:
         title: str,
         description: str,
         allow_maybe: bool,
+        access: str = "private",
     ) -> None:
 
         response = self._request(
@@ -774,7 +785,7 @@ class NextcloudClient:
                 "poll": {
                     "title": title,
                     "description": description,
-                    "access": "private",
+                    "access": access,
                     "allowComment": True,
                     "allowMaybe": allow_maybe,
                     "allowProposals": "disallow",
@@ -909,6 +920,16 @@ class NextcloudClient:
         return fallback_hour, fallback_minute
     
     def create_poll_share(self, poll_id: str, user_id: str, share_type: str = "user"):
+        print(
+            "DEBUG create_poll_share request:",
+            {
+                "poll_id": poll_id,
+                "user_id": user_id,
+                "share_type": share_type,
+                "current_user": self.username,
+            },
+        )
+    
         response = self._request(
             "POST",
             f"/apps/polls/poll/{poll_id}/share",

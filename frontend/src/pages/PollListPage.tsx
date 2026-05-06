@@ -1,9 +1,10 @@
 import { memo, useEffect, useRef, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Plus, X, Trash2, LogOut, Info } from 'lucide-react'
+import { Plus, X, Trash2, LogOut, Info, Check } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, fetchShareGroups, type Poll, type PollOption, type CreatePollOptionInput, type User, type GroupOption } from '../api'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
+import ToggleSwitch from '../components/ToggleSwitch'
 
 type PollListPageProps = {
   initialFilter?: string
@@ -17,6 +18,7 @@ type PollSummaryOption = {
   maybeCount: number
   missingCount: number
   currentUser?: 'yes' | 'no' | 'maybe' | null
+  timestamp?: number
 }
 
 type PollSummary = {
@@ -650,6 +652,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   }
 
   const [showCreatePollDialog, setShowCreatePollDialog] = useState(false)
+  const [newPollAccess, setNewPollAccess] = useState<'private' | 'open'>('private')
   const [createPollLoading, setCreatePollLoading] = useState(false)
   const [createPollError, setCreatePollError] = useState('')
   const [newPollTitle, setNewPollTitle] = useState('')
@@ -772,7 +775,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   const [showCreateButton, setShowCreateButton] = useState(true)  
 
   useEffect(() => {
-    const el = listScrollRef.current
+    const el = listScrollRef.current!
     if (!el) return
 
     let lastScrollTop = el.scrollTop
@@ -839,8 +842,23 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
     })
   }, [polls, textFilter, dateFrom, dateTo])
 
+  const visiblePolls = useMemo(() => {
+    return filteredPolls.filter((poll) => {
+      if (poll.access !== 'private') {
+        return true
+      }
+
+      return Boolean(
+        poll.permissions?.isOwner ||
+        poll.permissions?.isPollAdmin ||
+        poll.permissions?.canManagePoll ||
+        poll.permissions?.canManageAuthors
+      )
+    })
+  }, [filteredPolls])
+
   const renderedPolls = useMemo(() => {
-    return filteredPolls.map((poll) => {
+    return visiblePolls.map((poll) => {
       const summary = pollSummaries[poll.id]
 
       const summaryOptions =
@@ -855,7 +873,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
             maybe: option.maybeCount,
             count: option.yesCount + option.noCount + option.maybeCount,
             missing: option.missingCount,
-            currentUser: option.currentUser ?? null,
+            currentUser: option.currentUser ?? undefined,
           },
         })) ?? []
 
@@ -919,7 +937,7 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
       return bTime - aTime // neueste zuerst
     })
-}, [filteredPolls, pollSummaries])
+}, [visiblePolls, pollSummaries])
 
   const openPollCount = useMemo(() => {
     return renderedPolls.filter(
@@ -976,6 +994,9 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
   function closeCreatePollDialog() {
     if (createPollLoading) return
     setShowCreatePollDialog(false)
+    setNewPollTitle('')
+    setNewPollDescription('')
+    setNewPollAccess('private')
   }
 
   function addPollOptionRow() {
@@ -1037,10 +1058,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
     }
 
     const parsedOptions: CreatePollOptionInput[] = []
+    const hasEmptyDateRow = newPollOptions.some((row) => !row.date)
+
+    if (hasEmptyDateRow) {
+      setCreatePollError('Bitte für jeden Termin ein Datum angeben.')
+      return
+    }
 
     for (const row of newPollOptions) {
-      if (!row.date) continue
-
       const dateTimeString = row.time
         ? `${row.date}T${row.time}`
         : `${row.date}T19:30`
@@ -1073,12 +1098,16 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
         options: parsedOptions,
         allowMaybe: newPollAllowMaybe,
         shareGroupIds: selectedShareGroupIds,
+        access: newPollAccess,
       })
-
+      showSuccess(`Umfrage „${title}“ wurde erstellt.`)
+      setNewPollTitle('')
+      setNewPollDescription('')
+      setNewPollAccess('private')
       setShowCreatePollDialog(false)
       await fetchPolls().then(setPolls)
 
-      showSuccess(`Umfrage „${title}“ wurde erstellt.`)
+      
     } catch (error) {
       console.error(error)
 
@@ -1553,14 +1582,53 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.55rem',
-                  fontSize: '0.92rem',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  padding: '0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.75rem',
+                  background: '#f9fafb',
                 }}
               >
-                <input
-                  type="checkbox"
+   
+
+                <ToggleSwitch
+                  checked={newPollAccess === 'open'}
+                  onChange={(checked) =>
+                    setNewPollAccess(checked ? 'open' : 'private')
+                  }
+                />
+                <span>
+                  <strong>{newPollAccess === 'open' ? 'Öffentlich' : 'Privat'}</strong>
+                  <br />
+                  <small style={{ color: '#6b7280' }}>
+                    {newPollAccess === 'open'
+                      ? 'Jeder kann diese Umfrage sehen.'
+                      : 'Nur für Autoren und Co-Autoren.'}
+                  </small>
+                </span>
+                
+              </label>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  padding: '0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.75rem',
+                  background: '#f9fafb',
+                }}
+              >
+           
+
+                <ToggleSwitch
                   checked={newPollAllowMaybe}
-                  onChange={(e) => setNewPollAllowMaybe(e.target.checked)}
+                  onChange={(checked) =>
+                    setNewPollAllowMaybe(checked)
+                  }
                 />
                 <span>„Vielleicht“ erlauben</span>
               </label>
@@ -1724,9 +1792,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
 
                 <IconButton
                   onClick={handleCreatePoll}
-                  disabled={createPollLoading}
+                  disabled={
+                    createPollLoading ||
+                    !newPollTitle.trim() ||
+                    newPollOptions.length === 0 ||
+                    newPollOptions.some((row) => !row.date)
+                  }
                   title="Umfrage erstellen"
-                  icon={<Plus size={18} />}
+                  icon={<Check size={18} />}
                   variant="primary"
                   size={40}
                 />
