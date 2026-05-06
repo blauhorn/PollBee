@@ -4,6 +4,7 @@ import { Plus, X, Trash2, LogOut, Info, Check } from 'lucide-react'
 import { fetchMe, fetchPolls, createPoll, fetchShareGroups, type Poll, type PollOption, type CreatePollOptionInput, type User, type GroupOption } from '../api'
 import IconButton from '../components/IconButton'
 import {showSuccess, showError, showLoading} from '../utils/toast'
+import ToggleSwitch from '../components/ToggleSwitch'
 
 type PollListPageProps = {
   initialFilter?: string
@@ -1599,13 +1600,14 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                   </small>
                 </span>
 
-                <input
-                  type="checkbox"
+                <ToggleSwitch
                   checked={newPollAccess === 'open'}
-                  onChange={(event) =>
-                    setNewPollAccess(event.target.checked ? 'open' : 'private')
+                  onChange={(checked) =>
+                    setNewPollAccess(checked ? 'open' : 'private')
                   }
                 />
+
+                
               </label>
 
               <label
@@ -1616,10 +1618,13 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                   fontSize: '0.92rem',
                 }}
               >
-                <input
-                  type="checkbox"
+           
+
+                <ToggleSwitch
                   checked={newPollAllowMaybe}
-                  onChange={(e) => setNewPollAllowMaybe(e.target.checked)}
+                  onChange={(checked) =>
+                    setNewPollAllowMaybe(e.target.checked)
+                  }
                 />
                 <span>„Vielleicht“ erlauben</span>
               </label>
