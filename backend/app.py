@@ -94,6 +94,7 @@ class CreatePollRequest(BaseModel):
 class PollTextUpdateRequest(BaseModel):
     title: str
     description: str = ""
+    access: Literal["private", "open"] = "private"
 
 def first_nonempty_str(*values):
     for value in values:
