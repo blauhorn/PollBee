@@ -1769,7 +1769,7 @@ def create_poll(payload: CreatePollPayload, request: Request):
     description = payload.description.strip()
     options = payload.options
     allow_maybe = payload.allowMaybe
-    access=payload.access
+    access = payload.access
 
     if not title:
         raise HTTPException(status_code=400, detail="Titel fehlt")
