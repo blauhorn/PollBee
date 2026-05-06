@@ -488,6 +488,21 @@ def build_light_poll_list_item(
         else None
     ) or (detail_poll_data or raw_poll).get("created")
     access = effective_configuration.get("access") or "private"
+
+    source_poll = detail_poll_data or raw_poll
+
+    current_user_status = source_poll.get("currentUserStatus") or {}
+    raw_permissions = source_poll.get("permissions") or {}
+
+    is_owner = bool(current_user_status.get("isOwner"))
+
+    is_poll_admin = bool(
+        is_owner
+        or raw_permissions.get("edit")
+        or raw_permissions.get("addShares")
+        or raw_permissions.get("changeOwner")
+        or raw_permissions.get("delete")
+    )
     return {
         "id": str(raw_poll.get("id")),
         "title": effective_configuration.get("title")
@@ -508,6 +523,13 @@ def build_light_poll_list_item(
         "options": [],
         "owner": owner.get("displayName") or owner.get("userId") or "",
         "created": created,
+        "permissions": {
+            "isOwner": is_owner,
+            "isPollAdmin": is_poll_admin,
+            "canToggleClosed": is_poll_admin,
+            "canManagePoll": is_poll_admin,
+            "canManageAuthors": is_owner,
+        },
     }
 
 @app.get("/")
