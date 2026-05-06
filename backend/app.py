@@ -487,7 +487,7 @@ def build_light_poll_list_item(
         if isinstance((detail_poll_data or raw_poll).get("status"), dict)
         else None
     ) or (detail_poll_data or raw_poll).get("created")
-
+    access = effective_configuration.get("access") or "private"
     return {
         "id": str(raw_poll.get("id")),
         "title": effective_configuration.get("title")
@@ -500,6 +500,9 @@ def build_light_poll_list_item(
         or "",
         "status": derived_status,
         "isClosed": is_closed,
+        "access": access,
+        "isPrivate": access == "private",
+        "isOpen": access == "open",
         "dueDate": str(due_date) if due_date else "",
         "summaryText": "",
         "options": [],
@@ -1183,6 +1186,7 @@ def get_poll_by_id(poll_id: str, request: Request):
 
     participants.sort(key=lambda item: (item["displayName"] or "").lower())
     missing_participants.sort(key=lambda item: (item["displayName"] or "").lower())
+    access = configuration.get("access") or "private"
 
     return {
         "id": str(poll_data.get("id", poll_id)),
@@ -1194,6 +1198,9 @@ def get_poll_by_id(poll_id: str, request: Request):
         "dueDate": due_date,
         "summaryText": "",
         "allowMaybe": allow_maybe,
+        "access": access,
+        "isPrivate": access == "private",
+        "isOpen": access == "open",
         "anonymous": anonymous,
         "showResults": configuration.get("showResults"),
         "debugConfiguration": {
