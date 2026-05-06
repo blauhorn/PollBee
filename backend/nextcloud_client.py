@@ -630,6 +630,7 @@ class NextcloudClient:
         description: str,
         options: list[Any],
         allow_maybe: bool,
+        access: str = "private",
         share_group_ids: list[str] | None = None,
     ) -> dict[str, Any]:
 
@@ -732,13 +733,13 @@ class NextcloudClient:
                     f"Add option failed: {option_response.status_code} {option_response.text}"
                 )
 
-        if description:
-            self.update_poll_description(
-                poll_id=poll_id,
-                title=title,
-                description=description,
-                allow_maybe=allow_maybe,
-            )
+        self.update_poll_description(
+            poll_id=poll_id,
+            title=title,
+            description=description,
+            allow_maybe=allow_maybe,
+            access=access,
+        )
 
         failed_group_shares: list[str] = []
 
@@ -768,6 +769,7 @@ class NextcloudClient:
         title: str,
         description: str,
         allow_maybe: bool,
+        access: str = "private",
     ) -> None:
 
         response = self._request(
@@ -783,7 +785,7 @@ class NextcloudClient:
                 "poll": {
                     "title": title,
                     "description": description,
-                    "access": "private",
+                    "access": access,
                     "allowComment": True,
                     "allowMaybe": allow_maybe,
                     "allowProposals": "disallow",

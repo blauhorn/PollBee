@@ -9,7 +9,7 @@ from register_config import REGISTER_GROUPS
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
-from typing import Any
+from typing import Any, Literal
 from fastapi.responses import Response as FastAPIResponse
 from nextcloud_client import (
     NextcloudApiError,
@@ -87,6 +87,7 @@ class CreatePollRequest(BaseModel):
     allowMaybe: bool = True
     options: list[CreatePollOptionRequest]
     shareGroupIds: list[str] = []
+    access: Literal["private", "open"] = "private"
 
 class PollTextUpdateRequest(BaseModel):
     title: str
@@ -1768,6 +1769,7 @@ def create_poll(payload: CreatePollPayload, request: Request):
     description = payload.description.strip()
     options = payload.options
     allow_maybe = payload.allowMaybe
+    access=payload.access
 
     if not title:
         raise HTTPException(status_code=400, detail="Titel fehlt")
@@ -1781,6 +1783,7 @@ def create_poll(payload: CreatePollPayload, request: Request):
             description=description,
             options=options,
             allow_maybe=allow_maybe,
+            access=access,
             share_group_ids=payload.shareGroupIds,
         )
     except NextcloudApiError as exc:
