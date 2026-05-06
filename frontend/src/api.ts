@@ -87,6 +87,9 @@ export type PollDetail = {
   summaryText: string
   type?: string
   allowMaybe?: boolean
+  access?: 'private' | 'open'
+  isPrivate?: boolean
+  isOpen?: boolean
   anonymous?: boolean
   showResults?: string
   options: PollOption[]
@@ -616,7 +619,8 @@ export async function fetchShareGroups(): Promise<GroupOption[]> {
 
 export async function updatePollText(
   pollId: string,
-  payload: { title: string; description: string },
+  payload: { title: string; description: string; access: 'private' | 'open' },
+
 ): Promise<{ poll: PollDetail }> {
   const response = await fetch(`${API_BASE}/polls/${pollId}/text`, {
     method: 'PUT',
