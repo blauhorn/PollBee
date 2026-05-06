@@ -1614,8 +1614,12 @@ export default function PollListPage({ initialFilter = '' }: PollListPageProps) 
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.55rem',
-                  fontSize: '0.92rem',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  padding: '0.75rem',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.75rem',
+                  background: '#f9fafb',
                 }}
               >
            
