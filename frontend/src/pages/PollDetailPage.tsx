@@ -2337,12 +2337,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                     lineHeight: 1.4,
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={pollAdminConfirm}
-                    onChange={(e) => setPollAdminConfirm(e.target.checked)}
-                    style={{ marginTop: '0.15rem' }}
-                  />
+         
 
                   <ToggleSwitch
                     checked={pollAdminConfirm}
