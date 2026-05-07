@@ -2531,11 +2531,15 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                 fontSize: '0.92rem',
               }}
             >
-              <input
-                type="checkbox"
-                checked={calendarAllDay}
-                onChange={(e) => setCalendarAllDay(e.target.checked)}
+
+
+              <ToggleSwitch
+                  checked={calendarAllDay}
+                  onChange={(checked) =>
+                  setCalendarAllDay(checked)
+                  }
               />
+
               <span>Ganztägiger Termin</span>
             </label>
 
@@ -2762,7 +2766,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                 checked={editPollAccess === 'open'}
                 onChange={(checked) =>
                 setEditPollAccess(checked ? 'open' : 'private')
-                              }
+                }
             />
           </label>
 
