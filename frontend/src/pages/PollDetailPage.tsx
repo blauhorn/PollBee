@@ -2091,11 +2091,11 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                   lineHeight: 1.4,
                 }}
               >
-                <input
-                  type="checkbox"
+               
+
+                <ToggleSwitch
                   checked={transferConfirm}
-                  onChange={(e) => setTransferConfirm(e.target.checked)}
-                  style={{ marginTop: '0.15rem' }}
+                  onChange={(checked) => setTransferConfirm(checked)}
                 />
                 <span>
                   Ich bestätige die Übertragung an <strong>{selectedNewOwnerLabel}</strong>.
@@ -2337,11 +2337,11 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                     lineHeight: 1.4,
                   }}
                 >
-                  <input
-                    type="checkbox"
+         
+
+                  <ToggleSwitch
                     checked={pollAdminConfirm}
-                    onChange={(e) => setPollAdminConfirm(e.target.checked)}
-                    style={{ marginTop: '0.15rem' }}
+                    onChange={(checked) => setPollAdminConfirm(checked)}
                   />
                   <span>
                     Ich bestätige, dass die vorgemerkten Bandmitglieder Co-Autor-Rechte erhalten sollen.
@@ -2531,11 +2531,15 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                 fontSize: '0.92rem',
               }}
             >
-              <input
-                type="checkbox"
-                checked={calendarAllDay}
-                onChange={(e) => setCalendarAllDay(e.target.checked)}
+
+
+              <ToggleSwitch
+                  checked={calendarAllDay}
+                  onChange={(checked) =>
+                  setCalendarAllDay(checked)
+                  }
               />
+
               <span>Ganztägiger Termin</span>
             </label>
 
@@ -2613,12 +2617,14 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                         borderBottom: '1px solid #f1f5f9',
                       }}
                     >
-                      <input
-                        type="checkbox"
+                  
+                      <ToggleSwitch
                         checked={selection.selected}
                         onChange={() => toggleCalendarOptionSelected(option.id)}
-                        style={{ marginTop: '0.25rem' }}
                       />
+
+
+                                        
 
                       <div>
                         <div style={{ fontWeight: 600 }}>{formatOptionDate(option)}</div>
@@ -2762,7 +2768,7 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                 checked={editPollAccess === 'open'}
                 onChange={(checked) =>
                 setEditPollAccess(checked ? 'open' : 'private')
-                              }
+                }
             />
           </label>
 
