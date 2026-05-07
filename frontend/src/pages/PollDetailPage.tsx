@@ -2091,11 +2091,11 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                   lineHeight: 1.4,
                 }}
               >
-                <input
-                  type="checkbox"
+               
+
+                <ToggleSwitch
                   checked={transferConfirm}
-                  onChange={(e) => setTransferConfirm(e.target.checked)}
-                  style={{ marginTop: '0.15rem' }}
+                  onChange={(checked) => setTransferConfirm(checked)}
                 />
                 <span>
                   Ich bestätige die Übertragung an <strong>{selectedNewOwnerLabel}</strong>.
@@ -2342,6 +2342,11 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                     checked={pollAdminConfirm}
                     onChange={(e) => setPollAdminConfirm(e.target.checked)}
                     style={{ marginTop: '0.15rem' }}
+                  />
+
+                  <ToggleSwitch
+                    checked={pollAdminConfirm}
+                    onChange={(checked) => setPollAdminConfirm(checked)}
                   />
                   <span>
                     Ich bestätige, dass die vorgemerkten Bandmitglieder Co-Autor-Rechte erhalten sollen.
