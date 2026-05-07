@@ -2617,12 +2617,14 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
                         borderBottom: '1px solid #f1f5f9',
                       }}
                     >
-                      <input
-                        type="checkbox"
+                  
+                      <ToggleSwitch
                         checked={selection.selected}
                         onChange={() => toggleCalendarOptionSelected(option.id)}
-                        style={{ marginTop: '0.25rem' }}
                       />
+
+
+                                        
 
                       <div>
                         <div style={{ fontWeight: 600 }}>{formatOptionDate(option)}</div>
