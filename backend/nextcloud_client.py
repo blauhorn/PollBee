@@ -496,8 +496,9 @@ class NextcloudClient:
         poll_app_url: str,
         entry_status: str,
     ) -> dict[str, Any]:
-        base_dt = datetime.fromtimestamp(option_timestamp)
-
+        berlin = ZoneInfo("Europe/Berlin")
+        base_dt = datetime.fromtimestamp(option_timestamp, tz=berlin)
+        
         uid = f"{poll_id}-{option_timestamp}-{calendar_uri}@pollbee"
         dtstamp = self._format_utc(datetime.now(timezone.utc))
 
