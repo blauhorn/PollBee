@@ -210,17 +210,72 @@ Die zentrale Konfiguration erfolgt über die `.env`-Datei.
 ### Beispiel:
 
 ```env
-# Basis-URL deiner Nextcloud
-NEXTCLOUD_BASE_URL=https://cloud.example.com
+# -----------------------------------------------------------------------------
+# PollBee Instanz / Container Benennung
+# -----------------------------------------------------------------------------
 
-# Öffentliche URL der PollBee API (für Redirects / Login-Flow)
-PUBLIC_BASE_URL=https://pollbee.example.com
+COMPOSE_NAME=pollbee
 
-# Secret für interne Auth-/State-Validierung
-APP_SECRET=change-me
+# -----------------------------------------------------------------------------
+# Network ports (hostseitig)
+# -----------------------------------------------------------------------------
 
-# CORS / erlaubte Hosts (optional)
-ALLOWED_ORIGINS=https://pollbee.example.com
+FRONTEND_PORT=8100
+BACKEND_PORT=8101
+
+# -----------------------------------------------------------------------------
+# Nextcloud connection -> 
+# hier eintragen, wie die Basis-URL deiner Nextcloud ist.
+# vorher muss der Admin der nextcloud ein App-Password 
+# auf einem Admin -Account einrichten
+# -----------------------------------------------------------------------------
+
+NEXTCLOUD_BASE_URL=https://cloud.example.org
+NEXTCLOUD_ADMIN_USERNAME=admin
+NEXTCLOUD_ADMIN_APP_PASSWORD=replace-with-app-password
+
+# -----------------------------------------------------------------------------
+# Frontend build configuration
+# -----------------------------------------------------------------------------
+
+VITE_NEXTCLOUD_BASE_URL=https://cloud.example.org
+
+# Öffentlicher  Basis-Pfad dieser PollBee Instanz
+# z.B.:
+#   /pollapp/
+#   /pollbee-family/
+#   /pollbee-souldiers/
+VITE_BASE_PATH=/pollapp/
+
+# Public API Basis-Pfad
+VITE_API_BASE=/pollapp/api
+
+# PWA metadata
+VITE_PWA_ID=https://cloud.example.org/pollapp/
+VITE_START_URL=/pollapp/
+
+VITE_APP_NAME=PollBee
+VITE_APP_SHORT_NAME=PollBee
+
+# Browser UI color
+VITE_THEME_COLOR=#2563eb
+
+# -----------------------------------------------------------------------------
+# Backend public API prefix
+# -----------------------------------------------------------------------------
+
+# Usually identical to VITE_API_BASE
+POLLAPP_API_PREFIX=/pollapp/api
+
+# -----------------------------------------------------------------------------
+# Lokale Pfade
+# -----------------------------------------------------------------------------
+# path to  branding assets mounted into the frontend container
+# Copy branding-example/ to branding/ and customize it.
+
+ASSETS_PATH=./branding
+BACKEND_DATA_PATH=./data
+
 ```
 
 ---
