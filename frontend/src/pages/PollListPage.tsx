@@ -451,8 +451,8 @@ const PollListSticky = memo(function PollListSticky({
 		  }}
 		>
 		  <img
-        src={`${basePath}branding/logo-ntso.svg`}
-        alt="NTSO"
+        src={`${basePath}branding/logo.svg`}
+        alt="LOGO"
         style={{
           maxHeight: '2rem',
           maxWidth: '5rem',

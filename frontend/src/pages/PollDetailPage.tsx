@@ -1537,8 +1537,8 @@ export default function PollDetailPage({ forcedPollId }: PollDetailPageProps) {
           }}
         >
           <img
-            src={`${BASE_PATH}branding/logo-ntso.svg`}
-            alt="NTSO"
+            src={`${BASE_PATH}branding/logo.svg`}
+            alt="LOGO"
             style={{
               maxHeight: '2rem',
               maxWidth: '5rem',
