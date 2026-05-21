@@ -1,0 +1,21 @@
+server {
+    listen 8100;
+    server_name localhost;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location = ${VITE_BASE_PATH_NO_SLASH} {
+        return 301 ${VITE_BASE_PATH};
+    }
+
+    location ${VITE_BASE_PATH}branding/ {
+        rewrite ^${VITE_BASE_PATH_REGEX}(.*)$ /$1 break;
+        try_files $uri =404;
+    }
+
+    location ${VITE_BASE_PATH} {
+        rewrite ^${VITE_BASE_PATH_REGEX}(.*)$ /$1 break;
+        try_files $uri $uri/ /index.html;
+    }
+}

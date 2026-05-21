@@ -29,7 +29,7 @@ export default function HomePage() {
 
       {error ? <p style={{ color: 'crimson' }}>Fehler: {error}</p> : null}
 
-      <p>Willkommen zur Web-App für NTSO-Umfragen.</p>
+      <p>Willkommen zur Web-App für Nextcloud-Umfragen.</p>
 
       <p>
         <Link to="/login">Zum Login</Link>

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   pollapp-frontend:
     build:
@@ -7,14 +5,22 @@ services:
       args:
         VITE_BASE_PATH: ${VITE_BASE_PATH}
         VITE_API_BASE: ${VITE_API_BASE}
+        VITE_PWA_ID: ${VITE_PWA_ID}
+        VITE_APP_NAME: ${VITE_APP_NAME}
+        VITE_APP_SHORT_NAME: ${VITE_APP_SHORT_NAME}
+        VITE_THEME_COLOR: ${VITE_THEME_COLOR}
+        VITE_START_URL: ${VITE_START_URL}
     container_name: ${COMPOSE_NAME}-frontend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${FRONTEND_PORT}:8100"
+      - "${FRONTEND_PORT}:8100"
     depends_on:
       - pollapp-backend
     environment:
       VITE_NEXTCLOUD_BASE_URL: ${VITE_NEXTCLOUD_BASE_URL}
+      VITE_BASE_PATH: ${VITE_BASE_PATH}
+      VITE_BASE_PATH_NO_SLASH: ${VITE_BASE_PATH_NO_SLASH}
+      VITE_BASE_PATH_REGEX: ${VITE_BASE_PATH_REGEX}
     volumes:
       - ${ASSETS_PATH}:/usr/share/nginx/html/branding:ro
 
@@ -23,7 +29,7 @@ services:
     container_name: ${COMPOSE_NAME}-backend
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${BACKEND_PORT}:8101"
+      - "${BACKEND_PORT}:8101"
     environment:
       NEXTCLOUD_BASE_URL: ${NEXTCLOUD_BASE_URL}
       NEXTCLOUD_ADMIN_USERNAME: ${NEXTCLOUD_ADMIN_USERNAME}
