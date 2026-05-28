@@ -42,6 +42,8 @@ REGISTER_MEMBERS_CACHE = {
 }
 REGISTER_MEMBERS_CACHE_TTL_SECONDS = 300
 REGISTER_MEMBERS_CACHE_LOCK = threading.Lock()
+POLL_SUMMARY_CACHE = {}
+POLL_SUMMARY_CACHE_TTL_SECONDS = 300
 
 class PollCommentPayload(BaseModel):
     comment: str
@@ -926,7 +928,11 @@ def get_poll_summary(poll_id: str, request: Request):
     provisioning_client = build_provisioning_client()
 
     started = time.monotonic()
+    cache_key = f"{session.username}:{poll_id}"
+    cached = POLL_SUMMARY_CACHE.get(cache_key)
 
+    if cached and time.monotonic() - cached["timestamp"] < POLL_SUMMARY_CACHE_TTL_SECONDS:
+        return cached["data"]
     try:
         try:
             t0 = time.monotonic()
@@ -971,11 +977,17 @@ def get_poll_summary(poll_id: str, request: Request):
             option_answer_counts=option_answer_counts,
             total_registered_members=len(registered_members_normalized),
         )
-
-        return {
+        result = {
             "pollId": poll_id,
             "options": options,
         }
+
+        POLL_SUMMARY_CACHE[cache_key] = {
+            "timestamp": time.monotonic(),
+            "data": result,
+        }
+
+        return result
 
     finally:
         duration = time.monotonic() - started
