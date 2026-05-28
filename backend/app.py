@@ -972,7 +972,11 @@ def get_poll_by_id(poll_id: str, request: Request):
     client = build_client_from_session(session)
 
     try:
+  
         raw_poll_response = client.get_poll(poll_id)
+        print(raw_poll_response.keys())
+        print(raw_poll_response)
+        
         raw_options = client.get_poll_options(poll_id)
         raw_votes = client.get_poll_votes(poll_id)
     except NextcloudApiError as exc:
