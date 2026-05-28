@@ -851,38 +851,24 @@ def get_polls(request: Request):
             f"title={configuration.get('title') or raw_poll.get('title')}"
         )
 
+        # WICHTIG:
+        # Keine Detailabfrage mehr im Listen-Endpunkt.
+        # Die Polls-App liefert seit dem Update offenbar zu langsam,
+        # wenn PollBee für jeden Poll zusätzlich /poll/{id} abfragt.
         detail_poll_data = None
-        detail_configuration = {}
-
-        try:
-            raw_poll_response = client.get_poll(poll_id)
-            detail_poll_data = raw_poll_response.get("poll", raw_poll_response)
-            detail_configuration = detail_poll_data.get("configuration", {}) or {}
-        except NextcloudApiError as exc:
-            print(f"DEBUG /polls detail failed for poll {poll_id}: {exc}")
 
         is_closed, derived_status = extract_poll_closed_state(
             raw_poll=raw_poll,
-            detail_poll_data=detail_poll_data,
+            detail_poll_data=None,
         )
 
-        effective_configuration = {
-            **configuration,
-            **detail_configuration,
-        }
-
         effective_due_date = (
-            (detail_poll_data or {}).get("expire")
-            or effective_configuration.get("expire")
-            or raw_poll.get("expire")
+            raw_poll.get("expire")
             or configuration.get("expire")
             or ""
         )
 
-        if (
-            effective_configuration.get("title") == "Probenlager"
-            or raw_poll.get("configuration", {}).get("title") == "Probenlager"
-        ):
+        if configuration.get("title") == "Probenlager":
             print(f"\n=== DEBUG POLL {poll_id} ===")
             print("DERIVED CLOSED:", is_closed)
             print("DERIVED STATUS:", derived_status)
@@ -899,6 +885,7 @@ def get_polls(request: Request):
         )
 
     return poll_list
+
 
 @app.get("/polls/{poll_id}/summary")
 def get_poll_summary(poll_id: str, request: Request):
