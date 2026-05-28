@@ -884,8 +884,6 @@ def get_polls(request: Request):
             or raw_poll.get("configuration", {}).get("title") == "Probenlager"
         ):
             print(f"\n=== DEBUG POLL {poll_id} ===")
-            print("LIST RAW:", raw_poll)
-            print("DETAIL RAW:", detail_poll_data)
             print("DERIVED CLOSED:", is_closed)
             print("DERIVED STATUS:", derived_status)
             print("===========================\n")
