@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import secrets
 import time
+import threading
 from provisioning_client import ProvisioningApiError, ProvisioningClient, ProvisioningCredentials
 from register_config import REGISTER_GROUPS
 
@@ -40,6 +41,7 @@ REGISTER_MEMBERS_CACHE = {
     "members": None,
 }
 REGISTER_MEMBERS_CACHE_TTL_SECONDS = 300
+REGISTER_MEMBERS_CACHE_LOCK = threading.Lock()
 
 class PollCommentPayload(BaseModel):
     comment: str
@@ -548,18 +550,24 @@ def get_cached_register_members(provisioning_client):
     cached_members = REGISTER_MEMBERS_CACHE["members"]
     cached_timestamp = REGISTER_MEMBERS_CACHE["timestamp"]
 
-    if (
-        cached_members is not None
-        and now - cached_timestamp < REGISTER_MEMBERS_CACHE_TTL_SECONDS
-    ):
+    if cached_members is not None and now - cached_timestamp < REGISTER_MEMBERS_CACHE_TTL_SECONDS:
         return cached_members
 
-    registered_members_normalized, _ = get_all_register_members(provisioning_client)
+    with REGISTER_MEMBERS_CACHE_LOCK:
+        # nach dem Warten auf den Lock nochmal prüfen
+        now = time.monotonic()
+        cached_members = REGISTER_MEMBERS_CACHE["members"]
+        cached_timestamp = REGISTER_MEMBERS_CACHE["timestamp"]
 
-    REGISTER_MEMBERS_CACHE["members"] = registered_members_normalized
-    REGISTER_MEMBERS_CACHE["timestamp"] = now
+        if cached_members is not None and now - cached_timestamp < REGISTER_MEMBERS_CACHE_TTL_SECONDS:
+            return cached_members
 
-    return registered_members_normalized
+        registered_members_normalized, _ = get_all_register_members(provisioning_client)
+
+        REGISTER_MEMBERS_CACHE["members"] = registered_members_normalized
+        REGISTER_MEMBERS_CACHE["timestamp"] = time.monotonic()
+
+        return registered_members_normalized
 
 @app.get("/")
 def root():
@@ -921,13 +929,20 @@ def get_poll_summary(poll_id: str, request: Request):
 
     try:
         try:
+            t0 = time.monotonic()
             registered_members_normalized = get_cached_register_members(provisioning_client)
+            print(f"DEBUG SUMMARY poll={poll_id} register members: {time.monotonic() - t0:.2f}s")
         except ProvisioningApiError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
         try:
+            t1 = time.monotonic()
             raw_options = client.get_poll_options(poll_id)
+            print(f"DEBUG SUMMARY poll={poll_id} options: {time.monotonic() - t1:.2f}s")
+
+            t2 = time.monotonic()
             raw_votes = client.get_poll_votes(poll_id)
+            print(f"DEBUG SUMMARY poll={poll_id} votes: {time.monotonic() - t2:.2f}s")
         except NextcloudApiError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
