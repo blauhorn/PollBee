@@ -937,16 +937,27 @@ def get_poll_summary(poll_id: str, request: Request):
 
         try:
             t1 = time.monotonic()
-            if poll_id == "10":
-                raw_poll_response = client.get_poll(poll_id)
-                print("DEBUG GET_POLL KEYS:", raw_poll_response.keys())
-                print("DEBUG GET_POLL RAW:", raw_poll_response)
-            raw_options = client.get_poll_options(poll_id)
-            print(f"DEBUG SUMMARY poll={poll_id} options: {time.monotonic() - t1:.2f}s")
 
-            t2 = time.monotonic()
-            raw_votes = client.get_poll_votes(poll_id)
-            print(f"DEBUG SUMMARY poll={poll_id} votes: {time.monotonic() - t2:.2f}s")
+            raw_poll_response = client.get_poll(poll_id)
+
+            poll_data = raw_poll_response.get("poll", raw_poll_response)
+
+            raw_options = (
+                raw_poll_response.get("options")
+                or poll_data.get("options")
+                or []
+            )
+
+            raw_votes = (
+                raw_poll_response.get("votes")
+                or poll_data.get("votes")
+                or []
+            )
+
+            print(
+                f"DEBUG SUMMARY poll={poll_id} combined poll fetch: "
+                f"{time.monotonic() - t1:.2f}s"
+            )
         except NextcloudApiError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
