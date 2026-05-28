@@ -893,32 +893,41 @@ def get_poll_summary(poll_id: str, request: Request):
     client = build_client_from_session(session)
     provisioning_client = build_provisioning_client()
 
-    try:
-        registered_members_normalized, _ = get_all_register_members(provisioning_client)
-    except ProvisioningApiError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    started = time.monotonic()
 
     try:
-        raw_options = client.get_poll_options(poll_id)
-        raw_votes = client.get_poll_votes(poll_id)
-    except NextcloudApiError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        try:
+            registered_members_normalized, _ = get_all_register_members(
+                provisioning_client
+            )
+        except ProvisioningApiError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    option_answer_counts = get_registered_option_answer_counts(
-        raw_votes=raw_votes,
-        registered_members_normalized=registered_members_normalized,
-    )
+        try:
+            raw_options = client.get_poll_options(poll_id)
+            raw_votes = client.get_poll_votes(poll_id)
+        except NextcloudApiError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    options = build_poll_option_list(
-        raw_options=raw_options,
-        option_answer_counts=option_answer_counts,
-        total_registered_members=len(registered_members_normalized),
-    )
+        option_answer_counts = get_registered_option_answer_counts(
+            raw_votes=raw_votes,
+            registered_members_normalized=registered_members_normalized,
+        )
 
-    return {
-        "pollId": poll_id,
-        "options": options,
-    }
+        options = build_poll_option_list(
+            raw_options=raw_options,
+            option_answer_counts=option_answer_counts,
+            total_registered_members=len(registered_members_normalized),
+        )
+
+        return {
+            "pollId": poll_id,
+            "options": options,
+        }
+
+    finally:
+        duration = time.monotonic() - started
+        print(f"DEBUG SUMMARY poll={poll_id} duration={duration:.2f}s")
 
 @app.get("/polls/{poll_id}")
 def get_poll_by_id(poll_id: str, request: Request):
