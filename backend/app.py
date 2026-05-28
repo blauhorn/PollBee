@@ -571,6 +571,17 @@ def get_cached_register_members(provisioning_client):
 
         return registered_members_normalized
 
+def invalidate_poll_summary_cache(poll_id: str):
+    suffix = f":{poll_id}"
+
+    keys_to_delete = [
+        key for key in POLL_SUMMARY_CACHE.keys()
+        if key.endswith(suffix)
+    ]
+
+    for key in keys_to_delete:
+        POLL_SUMMARY_CACHE.pop(key, None)
+
 @app.get("/")
 def root():
     return {"message": "PollApp backend läuft"}
@@ -1464,6 +1475,7 @@ def submit_vote(poll_id: str, payload: VoteRequest, request: Request):
             option_id=option_id,
             value=normalized_value,
         )
+        invalidate_poll_summary_cache(poll_id)
     except NextcloudApiError as exc:
         print(
             "DEBUG submit_vote failed:",
