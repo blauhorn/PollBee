@@ -35,6 +35,11 @@ LOGIN_FLOW_TTL_SECONDS = 60 * 10  # 10 Minuten
 login_flow_store: dict[str, dict] = {}
 session_store = SQLiteSessionStore(SESSION_DB_PATH)
 API_PREFIX = os.getenv("POLLAPP_API_PREFIX", "/pollapp/api")
+REGISTER_MEMBERS_CACHE = {
+    "timestamp": 0.0,
+    "members": None,
+}
+REGISTER_MEMBERS_CACHE_TTL_SECONDS = 300
 
 class PollCommentPayload(BaseModel):
     comment: str
@@ -537,6 +542,25 @@ def build_light_poll_list_item(
         },
     }
 
+def get_cached_register_members(provisioning_client):
+    now = time.monotonic()
+
+    cached_members = REGISTER_MEMBERS_CACHE["members"]
+    cached_timestamp = REGISTER_MEMBERS_CACHE["timestamp"]
+
+    if (
+        cached_members is not None
+        and now - cached_timestamp < REGISTER_MEMBERS_CACHE_TTL_SECONDS
+    ):
+        return cached_members
+
+    registered_members_normalized, _ = get_all_register_members(provisioning_client)
+
+    REGISTER_MEMBERS_CACHE["members"] = registered_members_normalized
+    REGISTER_MEMBERS_CACHE["timestamp"] = now
+
+    return registered_members_normalized
+
 @app.get("/")
 def root():
     return {"message": "PollApp backend läuft"}
@@ -897,9 +921,7 @@ def get_poll_summary(poll_id: str, request: Request):
 
     try:
         try:
-            registered_members_normalized, _ = get_all_register_members(
-                provisioning_client
-            )
+            registered_members_normalized = get_cached_register_members(provisioning_client)
         except ProvisioningApiError as exc:
             raise HTTPException(status_code=502, detail=str(exc)) from exc
 
