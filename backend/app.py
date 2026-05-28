@@ -937,6 +937,10 @@ def get_poll_summary(poll_id: str, request: Request):
 
         try:
             t1 = time.monotonic()
+            if poll_id == "10":
+                raw_poll_response = client.get_poll(poll_id)
+                print("DEBUG GET_POLL KEYS:", raw_poll_response.keys())
+                print("DEBUG GET_POLL RAW:", raw_poll_response)
             raw_options = client.get_poll_options(poll_id)
             print(f"DEBUG SUMMARY poll={poll_id} options: {time.monotonic() - t1:.2f}s")
 
@@ -974,9 +978,6 @@ def get_poll_by_id(poll_id: str, request: Request):
     try:
   
         raw_poll_response = client.get_poll(poll_id)
-        print(raw_poll_response.keys())
-        print(raw_poll_response)
-        
         raw_options = client.get_poll_options(poll_id)
         raw_votes = client.get_poll_votes(poll_id)
     except NextcloudApiError as exc:
