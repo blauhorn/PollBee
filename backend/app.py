@@ -44,6 +44,7 @@ REGISTER_MEMBERS_CACHE_TTL_SECONDS = 300
 REGISTER_MEMBERS_CACHE_LOCK = threading.Lock()
 POLL_SUMMARY_CACHE = {}
 POLL_SUMMARY_CACHE_TTL_SECONDS = 300
+POLLAPP_NAME = os.getenv("POLLAPP_NAME", "PollBee")
 
 class PollCommentPayload(BaseModel):
     comment: str
@@ -1927,3 +1928,9 @@ def list_share_groups(request: Request):
     ]
 
     return {"groups": groups}
+
+@app.get("/config")
+def get_public_config():
+    return {
+        "appName": POLLAPP_NAME,
+    }

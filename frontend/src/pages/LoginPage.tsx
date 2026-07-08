@@ -20,18 +20,20 @@ const API_BASE = import.meta.env.VITE_API_BASE || '/pollapp/api'
 const LAST_SERVER_URL_KEY = 'pollapp:lastServerUrl'
 const DEFAULT_SERVER_URL = import.meta.env.VITE_DEFAULT_SERVER_URL ?? ''
 
+
 export default function LoginPage() {
   const navigate = useNavigate()
 
   const [serverUrl, setServerUrl] = useState(
     () => localStorage.getItem(LAST_SERVER_URL_KEY) || DEFAULT_SERVER_URL,
   )
+  const [appName, setAppName] = useState('PollBee')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
   const pollTimerRef = useRef<number | null>(null)
-
+  
   function clearPollTimer() {
     if (pollTimerRef.current !== null) {
       window.clearInterval(pollTimerRef.current)
@@ -67,6 +69,22 @@ export default function LoginPage() {
       clearPollTimer()
     }
   }, [navigate])
+
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const response = await fetch(`${API_BASE}/config`)
+        if (!response.ok) return
+
+        const data = await response.json()
+        setAppName(data.appName || 'PollBee')
+      } catch {
+        // bewusst still
+      }
+    }
+
+    void loadConfig()
+  }, [])
 
   async function startLoginFlow() {
     const trimmedUrl = serverUrl.trim()
@@ -203,7 +221,7 @@ export default function LoginPage() {
             lineHeight: 1.2,
           }}
         >
-          NTSO PollApp
+          {appName}
         </h1>
 
         <p

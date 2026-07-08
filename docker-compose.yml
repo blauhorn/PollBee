@@ -36,5 +36,6 @@ services:
       NEXTCLOUD_ADMIN_APP_PASSWORD: ${NEXTCLOUD_ADMIN_APP_PASSWORD}
       POLLAPP_SESSION_DB_PATH: /data/pollapp_sessions.db
       POLLAPP_API_PREFIX: ${POLLAPP_API_PREFIX}
+      POLLAPP_NAME: ${POLLAPP_NAME}
     volumes:
       - ${BACKEND_DATA_PATH}:/data
